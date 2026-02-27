@@ -14,6 +14,7 @@ interface ProductCardProps {
   inStock: boolean;
   image?: string;
   variants?: { name: string; value: string }[];
+  onProductClick?: (product: WCProduct) => void;
   onNotifyMe: (productName: string) => void;
   onAddToCart?: (product: { id: string; name: string; price?: number; category: string; inStock: boolean }) => void;
 }
@@ -30,6 +31,7 @@ export function ProductCard({
   variants,
   onNotifyMe,
   onAddToCart,
+  onProductClick
 }: ProductCardProps) {
   const [selectedVariant, setSelectedVariant] = useState(variants?.[0]?.value || "");
 
