@@ -11,8 +11,9 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ProductListing } from "@/components/ProductListing";
 import { useCart } from "@/hooks/useCart";
 import { useRouter } from "next/navigation";
+import { Suspense } from "react";
 
-export default function ProductsPage() {
+function ProductsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const category = searchParams.get("category");
@@ -119,5 +120,17 @@ export default function ProductsPage() {
 
       <Footer onNavigate={navigateTo} />
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+      </div>
+    }>
+      <ProductsContent />
+    </Suspense>
   );
 }
