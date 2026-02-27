@@ -1,0 +1,1 @@
+Migrated the ShippingPage from Vite to Next.js. Adjusted the export to default and ensured compatibility with Next.js conventions.
