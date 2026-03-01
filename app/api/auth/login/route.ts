@@ -19,41 +19,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Autenticar no WordPress via REST API
-    const credentials = Buffer.from(`${email}:${password}`).toString('base64');
-    
-    const response = await fetch(`${wpUrl}/wp-json/wp/v2/users/me`, {
-      method: 'GET',
+    // 1. Usar o endpoint do plugin JWT em vez do Basic Auth
+    const response = await fetch(`${wpUrl}/wp-json/jwt-auth/v1/token`, {
+      method: 'POST',
       headers: {
-        'Authorization': `Basic ${credentials}`,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        username: email, // O plugin JWT aceita o email no campo username
+        password: password,
+      }),
     });
+
+    const data = await response.json();
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: 'Email ou senha inválidos' },
+        { error: data.message || 'Email ou senha inválidos' },
         { status: 401 }
       );
     }
 
-    const user = await response.json();
-
+    // 2. Montar a resposta de sucesso com os dados do usuário
     const res = NextResponse.json(
       {
         success: true,
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          avatar_url: user.avatar_url,
+          id: data.user_id,
+          email: data.user_email,
+          name: data.user_display_name,
         },
       },
       { status: 200 }
     );
 
-    // Salvar token em httpOnly cookie
-    res.cookies.set('wp_auth_token', credentials, {
+    // 3. Salvar O TOKEN (seguro) no cookie, NUNCA a senha
+    res.cookies.set('wp_auth_token', data.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
