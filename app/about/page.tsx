@@ -7,11 +7,21 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { About } from "@/components/About";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/hooks/useCart";
+import { Cart } from "@/components/Cart";
 
 export default function AboutPage() {
   const router = useRouter();
-    const { addToCart, cart, total, itemCount, isOpen: cartOpen, setIsOpen: setCartOpen, removeFromCart, updateQuantity, goToCheckout } = useCart();
-  
+  const {
+    cart,
+    total,
+    itemCount,
+    isOpen: cartOpen,
+    setIsOpen: setCartOpen,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    goToCheckout,
+  } = useCart();
 
   const navigateTo = (page: string) => {
     router.push(`/${page}`);
@@ -34,7 +44,7 @@ export default function AboutPage() {
         cartItemCount={itemCount}
         onCartClick={() => setCartOpen(true)}
         onNavigate={navigateTo}
-        onSearch={() => { }}
+        onSearch={handleSearch}
       />
 
       <CategoryNav onCategorySelect={handleCategorySelect} />
@@ -42,6 +52,16 @@ export default function AboutPage() {
       <About />
 
       <WhatsAppButton />
+
+      <Cart
+        isOpen={cartOpen}
+        onClose={() => setCartOpen(false)}
+        cart={cart}
+        total={total}
+        onUpdateQuantity={updateQuantity}
+        onRemoveItem={removeFromCart}
+        onCheckout={goToCheckout}
+      />
 
       <Footer onNavigate={navigateTo} />
     </div>

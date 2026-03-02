@@ -213,7 +213,7 @@ export function Header({ onCartClick, cartItemCount = 0, onNavigate, onSearch }:
               </div>
 
               <button 
-                onClick={() => handleNavigate("home")}
+                onClick={() => handleNavigate("/")}
                 className="text-left py-4 px-4 text-base tracking-wide text-black/80 hover:bg-black/5 transition-colors"
               >
                 HOME
@@ -230,12 +230,12 @@ export function Header({ onCartClick, cartItemCount = 0, onNavigate, onSearch }:
               >
                 SOBRE
               </button>
-              <button 
+              {/* <button 
                 onClick={() => handleNavigate("contact")}
                 className="text-left py-4 px-4 text-base tracking-wide text-black/80 hover:bg-black/5 transition-colors"
               >
                 CONTATO
-              </button>
+              </button> */}
 
               {/* Mobile-only actions */}
               <div className="mt-8 pt-8 border-t border-black/10 sm:hidden">
