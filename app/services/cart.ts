@@ -118,6 +118,7 @@ export const cartService = {
       console.log('Resposta do carrinho do servidor:', getCartRes);
 
       const wcNonce = getCartRes.headers.get('Nonce') || '';
+      console.log('Nonce recebido do servidor:', wcNonce);
 
       if (!getCartRes.ok && getCartRes.status !== 404) {
           console.warn("Falha ao buscar carrinho inicial");
