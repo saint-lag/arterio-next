@@ -123,54 +123,39 @@ export const cartService = {
     }
 
     try {
-      // 1. BUSCAR O CARRINHO ATUAL DO SERVIDOR
-      const getCartRes = await fetch(`${WP_CONFIG.storeApiUrl}/cart`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        credentials: 'include', 
-        cache: 'no-store', 
-      });
-
-      // Extrair o Nonce e o Token de identificação da sessão
-      const wcNonce = getCartRes.headers.get('Nonce') || '';
-      const cartToken = getCartRes.headers.get('Cart-Token') || '';
+      const getCartRes = await this.getCartResponse();
+      const wcNonce = getCartRes.headers.get('nonce') || '';
+      const cartToken = getCartRes.headers.get('cart-token') || '';
+      
 
       if (!getCartRes.ok && getCartRes.status !== 404) {
           console.warn("Falha ao buscar carrinho inicial");
       }
 
-      // Prepara os headers base para todas as próximas requisições desta sessão
-      const sessionHeaders: HeadersInit = {
-        'Accept': 'application/json', 
-        'Content-Type': 'application/json'
-      };
-      if (wcNonce) sessionHeaders['Nonce'] = wcNonce;
-      if (cartToken) sessionHeaders['Cart-Token'] = cartToken;
-
       if (getCartRes.ok) {
         const serverCart = await getCartRes.json();
 
-        // 2. LIMPAR O SERVIDOR: Remover itens velhos
+        // 2. LIMPAR O SERVIDOR: Se houver itens velhos, removemos um por um
         if (serverCart.items && serverCart.items.length > 0) {
           for (const item of serverCart.items) {
             await fetch(`${WP_CONFIG.storeApiUrl}/cart/remove-item`, {
               method: 'POST',
-              headers: sessionHeaders, // Enviamos o Cart-Token e o Nonce
-              credentials: 'include',
-              cache: 'no-store',
-              body: JSON.stringify({ key: item.key }), 
+              headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(wcNonce ? { 'Nonce': wcNonce } : {}), ...(cartToken ? { 'Cart-Token': cartToken } : {}) },
+              credentials: 'include', // Puxa o cookie de sessão do usuário,
+              cache: 'no-store', // Evita cache para garantir dados frescos
+              body: JSON.stringify({ key: item.key }), // Remove usando a chave única do servidor
             });
           }
         }
       }
 
-      // 3. INJETAR O CARRINHO NOVO: OBRIGATÓRIO enviar os mesmos headers!
+      // 3. INJETAR O CARRINHO NOVO: Loop sequencial obrigatório
       for (const item of cart) {
         const response = await fetch(`${WP_CONFIG.storeApiUrl}/cart/add-item`, {
           method: 'POST',
-          headers: sessionHeaders, // Se não enviar aqui, o WC cria um carrinho paralelo!
-          credentials: 'include',
-          cache: 'no-store',
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(wcNonce ? { 'Nonce': wcNonce } : {}), ...(cartToken ? { 'Cart-Token': cartToken } : {}) },
+          credentials: 'include', // Puxa o cookie de sessão do usuário,
+          cache: 'no-store', // Evita cache para garantir dados frescos
           body: JSON.stringify({
             id: item.product_id,
             quantity: item.quantity,
@@ -186,7 +171,8 @@ export const cartService = {
       // 4. Limpar o localStorage local
       this.clearCart();
 
-      // 5. Redirecionar para o checkout
+      // 5. Redirecionar para o checkout limpo
+      // Comentário para teste
       window.location.href = WP_CONFIG.checkoutUrl;
 
     } catch (error) {
@@ -197,31 +183,28 @@ export const cartService = {
 
   async syncCartFromServer(): Promise<CartItem[]> {
     try {
-      const localCart = this.getLocalCart();
-      
       const response = await this.getCartResponse();
       
       if (!response.ok) {
-        return localCart; // Se a API falhar, mantém o carrinho local a funcionar
+        return this.getLocalCart(); // Se falhar, mantém o que está localmente
       }
 
       const serverCart = await response.json();
 
-      // Mantemos intacto o que o utilizador estiver a adicionar no localStorage.
+      // Se o servidor diz que o carrinho está vazio, limpamos o front
       if (!serverCart.items || serverCart.items.length === 0) {
-        return localCart;
+        this.clearCart();
+        return [];
       }
 
-      if (localCart.length > 0) {
-        return localCart;
-      }
-
-      // Vamos reconstruir o carrinho visual para o utilizador.
+      // Reconstruímos o formato do CartItem local baseado na resposta do Woo
       const syncedCart: CartItem[] = serverCart.items.map((item: any) => {
+        // A Store API retorna valores em centavos (ex: 1500 = 15.00)
+        // O divisor por 100 pode variar dependendo da configuração de decimais no WooCommerce
         const price = (item.prices.price / 100).toFixed(2);
         
         return {
-          key: item.key,
+          key: item.key, // Mantemos a chave exata do Woo
           product_id: item.id,
           variation_id: item.variation_id || undefined,
           quantity: item.quantity,
@@ -229,6 +212,7 @@ export const cartService = {
             id: item.id.toString(),
             name: item.name,
             price: price,
+            // Adicione imagens ou outras propriedades que o seu card de produto exija
             images: item.images, 
           } as any,
           subtotal: (item.totals.line_subtotal / 100).toFixed(2),
@@ -236,12 +220,13 @@ export const cartService = {
         };
       });
 
+      // Sobrescreve o localStorage com a verdade absoluta do servidor
       this.saveLocalCart(syncedCart);
       return syncedCart;
 
     } catch (error) {
       console.error('Erro ao sincronizar com o WooCommerce:', error);
-      return this.getLocalCart(); // Em caso de erro catastrófico, o front não quebra
+      return this.getLocalCart();
     }
   }
 };
