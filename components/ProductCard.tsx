@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { WCProduct } from "@/types/woocommerce";
+import { decodeHTMLEntities } from "@/utils/formatters";
 
 interface ProductCardProps {
   id: string;
@@ -37,6 +38,7 @@ export function ProductCard({
 
   const PRODUCT_URL = `/product-detail/${id}`;
 
+  const cleanName = decodeHTMLEntities(name);
 
   return (
     <div className="group relative">
@@ -70,7 +72,7 @@ export function ProductCard({
           <Link href={PRODUCT_URL} className="block">
             <p className="mb-1 text-xs tracking-wide text-black/40">{category}</p>
             <h3 className="text-sm tracking-tight text-black group-hover:text-black/60 transition-colors">
-              {name}
+              {cleanName}
             </h3>
           </Link>
 
