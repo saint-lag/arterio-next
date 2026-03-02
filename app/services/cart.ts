@@ -115,6 +115,12 @@ export const cartService = {
         cache: 'no-store', // Evita cache para garantir dados frescos
       });
 
+      const wcNonce = getCartRes.headers.get('Nonce') || '';
+
+      if (!getCartRes.ok && getCartRes.status !== 404) {
+          console.warn("Falha ao buscar carrinho inicial");
+      }
+
       if (getCartRes.ok) {
         const serverCart = await getCartRes.json();
 
@@ -123,7 +129,7 @@ export const cartService = {
           for (const item of serverCart.items) {
             await fetch(`${WP_CONFIG.storeApiUrl}/cart/remove-item`, {
               method: 'POST',
-              headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+              headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(wcNonce ? { 'Nonce': wcNonce } : {}) },
               credentials: 'include', // Puxa o cookie de sessão do usuário,
               cache: 'no-store', // Evita cache para garantir dados frescos
               body: JSON.stringify({ key: item.key }), // Remove usando a chave única do servidor
