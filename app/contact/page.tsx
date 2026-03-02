@@ -16,16 +16,17 @@ const About = () => <div></div>;
 
 export default function ContactPage() {
   const router = useRouter();
-
+  const { addToCart, cart, total, itemCount, isOpen: cartOpen, setIsOpen: setCartOpen, removeFromCart, updateQuantity, goToCheckout } = useCart();
   const navigateTo = (path: string) => router.push(path);
   const handleSearch = (query: string) => console.log(query);
   const handleCategorySelect = (category: string) => console.log(category);
   return (
     <div className="min-h-screen bg-white">
       <Header
-        cartItemCount={0}
+        cartItemCount={itemCount}
+        onCartClick={() => setCartOpen(true)}
         onNavigate={navigateTo}
-        onSearch={handleSearch}
+        onSearch={() => { }}
       />
 
       <CategoryNav onCategorySelect={handleCategorySelect} />

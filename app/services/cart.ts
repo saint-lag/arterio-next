@@ -3,10 +3,10 @@ import type { CartItem, Product } from '@/app/types/woocommerce';
 
 export const cartService = {
   CART_KEY: 'arterio_cart',
-  
+
   getLocalCart(): CartItem[] {
     if (typeof window === 'undefined') return [];
-    
+
     try {
       const cart = localStorage.getItem(this.CART_KEY);
       return cart ? JSON.parse(cart) : [];
@@ -18,7 +18,7 @@ export const cartService = {
 
   saveLocalCart(items: CartItem[]): void {
     if (typeof window === 'undefined') return;
-    
+
     try {
       localStorage.setItem(this.CART_KEY, JSON.stringify(items));
     } catch (error) {
@@ -28,16 +28,16 @@ export const cartService = {
 
   addItem(product: Product, quantity: number = 1, variationId?: number): CartItem[] {
     const cart = this.getLocalCart();
-    
+
     const existingItemIndex = cart.findIndex(
-      item => item.product_id === parseInt(product.id) && 
-              item.variation_id === variationId
+      item => item.product_id === parseInt(product.id) &&
+        item.variation_id === variationId
     );
 
     if (existingItemIndex > -1) {
       cart[existingItemIndex].quantity += quantity;
       cart[existingItemIndex].total = (
-        parseFloat(cart[existingItemIndex].total) + 
+        parseFloat(cart[existingItemIndex].total) +
         (product.price * quantity)
       ).toFixed(2);
     } else {
@@ -67,7 +67,7 @@ export const cartService = {
   updateQuantity(itemKey: string, quantity: number): CartItem[] {
     const cart = this.getLocalCart();
     const itemIndex = cart.findIndex(item => item.key === itemKey);
-    
+
     if (itemIndex > -1 && quantity > 0) {
       cart[itemIndex].quantity = quantity;
       const product = cart[itemIndex].product as any;
@@ -84,7 +84,7 @@ export const cartService = {
 
   clearCart(): void {
     if (typeof window === 'undefined') return;
-    
+
     try {
       localStorage.removeItem(this.CART_KEY);
     } catch (error) {
@@ -110,23 +110,22 @@ export const cartService = {
       // 1. BUSCAR O CARRINHO ATUAL DO SERVIDOR (Para ver se há lixo antigo)
       const getCartRes = await fetch(`${WP_CONFIG.storeApiUrl}/cart`, {
         method: 'GET',
-        headers: { 'Nonce': 'prevent-cache' },
-        credentials: 'include', // Puxa o cookie de sessão do usuário
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'include', // Puxa o cookie de sessão do usuário,
+        cache: 'no-store', // Evita cache para garantir dados frescos
       });
 
       if (getCartRes.ok) {
         const serverCart = await getCartRes.json();
-        
+
         // 2. LIMPAR O SERVIDOR: Se houver itens velhos, removemos um por um
         if (serverCart.items && serverCart.items.length > 0) {
           for (const item of serverCart.items) {
             await fetch(`${WP_CONFIG.storeApiUrl}/cart/remove-item`, {
               method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json',
-                'Nonce': 'prevent-cache' 
-              },
-              credentials: 'include',
+              headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+              credentials: 'include', // Puxa o cookie de sessão do usuário,
+              cache: 'no-store', // Evita cache para garantir dados frescos
               body: JSON.stringify({ key: item.key }), // Remove usando a chave única do servidor
             });
           }
@@ -137,15 +136,13 @@ export const cartService = {
       for (const item of cart) {
         const response = await fetch(`${WP_CONFIG.storeApiUrl}/cart/add-item`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Nonce': 'prevent-cache',
-          },
-          credentials: 'include',
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+          credentials: 'include', // Puxa o cookie de sessão do usuário,
+          cache: 'no-store', // Evita cache para garantir dados frescos
           body: JSON.stringify({
             id: item.product_id,
             quantity: item.quantity,
-            variation_id: item.variation_id, 
+            variation_id: item.variation_id,
           }),
         });
 
@@ -156,7 +153,7 @@ export const cartService = {
 
       // 4. Limpar o localStorage local
       this.clearCart();
-      
+
       // 5. Redirecionar para o checkout limpo
       window.location.href = WP_CONFIG.checkoutUrl;
 
