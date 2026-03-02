@@ -35,11 +35,14 @@ export function ProductCard({
 }: ProductCardProps) {
   const [selectedVariant, setSelectedVariant] = useState(variants?.[0]?.value || "");
 
+  const PRODUCT_URL = `/product-detail/${id}`;
+
+
   return (
-    <Link href={`/product-detail/${id}`}>
+    <div className="group relative">
       <div className="group cursor-pointer">
         {/* Product Image */}
-        <div className="block">
+        <Link href={PRODUCT_URL} className="block">
           <div className="relative mb-4 aspect-square overflow-hidden bg-neutral-100 border border-black/5 hover:border-black/20 transition-colors">
             {image ? (
               <img
@@ -60,16 +63,16 @@ export function ProductCard({
               </div>
             )}
           </div>
-        </div>
+        </Link>
 
         {/* Product Info */}
         <div className="space-y-3">
-          <div>
+          <Link href={PRODUCT_URL} className="block">
             <p className="mb-1 text-xs tracking-wide text-black/40">{category}</p>
             <h3 className="text-sm tracking-tight text-black group-hover:text-black/60 transition-colors">
               {name}
             </h3>
-          </div>
+          </Link>
 
           {/* Color Variants */}
           {variants && variants.length > 0 && (
@@ -77,13 +80,14 @@ export function ProductCard({
               {variants.map((variant) => (
                 <button
                   key={variant.value}
-                  onClick={(e) => {
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     setSelectedVariant(variant.value);
                   }}
                   className={`h-6 w-6 border transition-all ${selectedVariant === variant.value
-                      ? "border-black scale-110"
-                      : "border-black/20 hover:border-black/40"
+                    ? "border-black scale-110"
+                    : "border-black/20 hover:border-black/40"
                     }`}
                   style={{ backgroundColor: variant.value }}
                   aria-label={variant.name}
@@ -102,21 +106,19 @@ export function ProductCard({
 
             {!inStock ? (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={() => {
                   onNotifyMe(name);
                 }}
-                className="text-xs tracking-wide text-black/60 underline hover:text-black transition-colors"
+                className="text-xs tracking-wide text-black/60 underline hover:text-black transition-colors cursor-pointer"
               >
                 AVISE-ME
               </button>
             ) : (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={() => {
                   onAddToCart?.({ id, name, price, category, inStock });
                 }}
-                className="text-xs tracking-wide text-black hover:text-black/60 transition-colors"
+                className="text-xs tracking-wide text-black hover:text-black/60 transition-colors cursor-pointer"
               >
                 ADICIONAR
               </button>
@@ -129,6 +131,6 @@ export function ProductCard({
           )}
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
