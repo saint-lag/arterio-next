@@ -9,8 +9,10 @@ export function useCart() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    const localCart = cartService.getLocalCart();
-    setCart(localCart);
+    setCart(cartService.getLocalCart());
+    cartService.syncCartFromServer().then((syncedItems) => {
+      setCart(syncedItems);
+    });
   }, []);
 
   const addToCart = useCallback((product: Product, quantity: number = 1, variationId?: number) => {
