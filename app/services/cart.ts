@@ -107,45 +107,62 @@ export const cartService = {
     }
 
     try {
-      const lineItems = cart.map(item => ({
-        id: item.product_id.toString(),
-        quantity: item.quantity,
-        variation_id: item.variation_id || undefined,
-      })).filter(item => item.id);
-
-      // Sincronizar com WooCommerce Store API
-      const response = await fetch(`${WP_CONFIG.storeApiUrl}/cart`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          items: lineItems,
-        }),
+      // 1. BUSCAR O CARRINHO ATUAL DO SERVIDOR (Para ver se há lixo antigo)
+      const getCartRes = await fetch(`${WP_CONFIG.storeApiUrl}/cart`, {
+        method: 'GET',
+        headers: { 'Nonce': 'prevent-cache' },
+        credentials: 'include', // Puxa o cookie de sessão do usuário
       });
 
-      if (!response.ok) {
-        console.warn('Erro ao sincronizar carrinho com WooCommerce');
-        // Mesmo com erro, tenta ir para checkout (pode estar usando cookies)
+      if (getCartRes.ok) {
+        const serverCart = await getCartRes.json();
+        
+        // 2. LIMPAR O SERVIDOR: Se houver itens velhos, removemos um por um
+        if (serverCart.items && serverCart.items.length > 0) {
+          for (const item of serverCart.items) {
+            await fetch(`${WP_CONFIG.storeApiUrl}/cart/remove-item`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Nonce': 'prevent-cache' 
+              },
+              credentials: 'include',
+              body: JSON.stringify({ key: item.key }), // Remove usando a chave única do servidor
+            });
+          }
+        }
       }
 
-      const data = await response.json();
-      console.log('Cart synced:', data);
+      // 3. INJETAR O CARRINHO NOVO: Loop sequencial obrigatório
+      for (const item of cart) {
+        const response = await fetch(`${WP_CONFIG.storeApiUrl}/cart/add-item`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Nonce': 'prevent-cache',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            id: item.product_id,
+            quantity: item.quantity,
+            variation_id: item.variation_id, 
+          }),
+        });
 
-      // Limpar carrinho local e redirecionar
+        if (!response.ok) {
+          console.warn(`Aviso: Falha ao sincronizar o produto ${item.product_id}`);
+        }
+      }
+
+      // 4. Limpar o localStorage local
       this.clearCart();
       
-      // Aguardar um momento para garantir sincronização
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      // 5. Redirecionar para o checkout limpo
       window.location.href = WP_CONFIG.checkoutUrl;
 
     } catch (error) {
-      console.error('Erro ao preparar checkout:', error);
-      // Tentar redirecionar mesmo com erro
-      this.clearCart();
-      window.location.href = WP_CONFIG.checkoutUrl;
+      console.error('Erro fatal ao preparar checkout:', error);
+      alert('Tivemos um problema de conexão com o checkout. Por favor, tente novamente.');
     }
   },
 

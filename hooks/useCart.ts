@@ -35,7 +35,11 @@ export function useCart() {
   }, []);
 
   const goToCheckout = useCallback(async () => {
-    await cartService.redirectToCheckout(cart);
+    try {
+      await cartService.redirectToCheckout(cart);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Erro desconhecido");
+    }
   }, [cart]);
 
   const total = cartService.getCartTotal(cart);
