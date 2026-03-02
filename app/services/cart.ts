@@ -117,8 +117,19 @@ export const cartService = {
 
       console.log('Resposta do carrinho do servidor:', getCartRes);
 
-      const wcNonce = getCartRes.headers.get('Nonce') || '';
+      // Extraindo e logando os headers para debug
+      const headersInfo = Array.from(getCartRes.headers.entries()).reduce((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {} as Record<string, string>);
+
+      console.log('Headers recebidos do servidor:', headersInfo);
+
+      const wcNonce = getCartRes.headers.get('nonce') || '';
+      const cartToken = getCartRes.headers.get('cart-token') || '';
+      
       console.log('Nonce recebido do servidor:', wcNonce);
+      console.log('Cart Token recebido do servidor:', cartToken);
 
       if (!getCartRes.ok && getCartRes.status !== 404) {
           console.warn("Falha ao buscar carrinho inicial");
@@ -133,7 +144,7 @@ export const cartService = {
           for (const item of serverCart.items) {
             await fetch(`${WP_CONFIG.storeApiUrl}/cart/remove-item`, {
               method: 'POST',
-              headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(wcNonce ? { 'Nonce': wcNonce } : {}) },
+              headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(wcNonce ? { 'Nonce': wcNonce } : {}), ...(cartToken ? { 'Cart-Token': cartToken } : {}) },
               credentials: 'include', // Puxa o cookie de sessão do usuário,
               cache: 'no-store', // Evita cache para garantir dados frescos
               body: JSON.stringify({ key: item.key }), // Remove usando a chave única do servidor
@@ -146,7 +157,7 @@ export const cartService = {
       for (const item of cart) {
         const response = await fetch(`${WP_CONFIG.storeApiUrl}/cart/add-item`, {
           method: 'POST',
-          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(wcNonce ? { 'Nonce': wcNonce } : {}) },
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(wcNonce ? { 'Nonce': wcNonce } : {}), ...(cartToken ? { 'Cart-Token': cartToken } : {}) },
           credentials: 'include', // Puxa o cookie de sessão do usuário,
           cache: 'no-store', // Evita cache para garantir dados frescos
           body: JSON.stringify({
