@@ -5,7 +5,7 @@ import { productService, mapWCProductsToLocal } from '@/app/services/woocommerce
 import type { Product } from '@/app/types/woocommerce';
 
 interface UseProductsOptions {
-  category?: string;
+  category?: string; // Este é o ID da categoria que vem da URL
   search?: string;
   perPage?: number;
   featured?: boolean;
@@ -27,57 +27,28 @@ export function useProducts(options: UseProductsOptions = {}) {
 
     let isMounted = true;
 
-    /* async function fetchProducts() {
+    async function fetchProducts() {
       try {
         setLoading(true);
         setError(null);
 
-        const wcProducts = await productService.getAll({
-          per_page: perPage,
-          category,
-          search,
-          featured,
-        });
-
-        if (isMounted) {
-          const localProducts = mapWCProductsToLocal(wcProducts);
-          setProducts(localProducts);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err : new Error('Failed to fetch products'));
-          console.error('Error fetching products:', err);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    } */
-
-      async function fetchProducts() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Não enviamos o 'category' na requisição pois a API espera um ID numérico.
-        // Faremos o filtro de categoria localmente abaixo.
-        const wcProducts = await productService.getAll({
+        // 1. Buscamos os produtos à API (sem enviar a categoria para evitar bugs da Store API)
+        let wcProducts = await productService.getAll({
           per_page: perPage,
           search,
           featured,
         });
 
         if (isMounted) {
-          let localProducts = mapWCProductsToLocal(wcProducts);
-          
-          // Aplicando o filtro pelo nome da categoria localmente
+          // 2. Filtramos a lista localmente usando o ID numérico exato do WooCommerce
           if (category) {
-            localProducts = localProducts.filter(
-              (p) => p.category.toLowerCase() === category.toLowerCase()
+            wcProducts = wcProducts.filter((wcProduct: any) => 
+              wcProduct.categories?.some((cat: any) => cat.id.toString() === category)
             );
           }
 
+          // 3. Mapeamos apenas os produtos filtrados para o ecrã
+          const localProducts = mapWCProductsToLocal(wcProducts);
           setProducts(localProducts);
         }
       } catch (err) {
