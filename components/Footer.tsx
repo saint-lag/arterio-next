@@ -28,7 +28,7 @@ export function Footer({ onNavigate }: FooterProps) {
               NAVEGAÇÃO
             </h3>
             <nav className="flex flex-col space-y-2">
-              <button onClick={() => onNavigate("home")} className="text-xs text-black/60 hover:text-black transition-colors text-left">
+              <button onClick={() => onNavigate("/")} className="text-xs text-black/60 hover:text-black transition-colors text-left">
                 Home
               </button>
               <button onClick={() => onNavigate("products")} className="text-xs text-black/60 hover:text-black transition-colors text-left">
@@ -44,7 +44,7 @@ export function Footer({ onNavigate }: FooterProps) {
           </div>
 
           {/* Help */}
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <h3 className="text-sm tracking-wide text-black">
               AJUDA
             </h3>
@@ -62,7 +62,7 @@ export function Footer({ onNavigate }: FooterProps) {
                 Política de Privacidade
               </button>
             </nav>
-          </div>
+          </div> */}
 
           {/* Contact */}
           <div className="space-y-4">

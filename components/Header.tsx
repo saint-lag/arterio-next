@@ -3,7 +3,7 @@
 import { Search, ShoppingCart, User, Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { LoginModal } from "@/components/LoginModal";
+import { LoginModal } from "@components/LoginModal";
 
 interface HeaderProps {
   onCartClick?: () => void;
