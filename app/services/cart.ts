@@ -142,7 +142,7 @@ export const cartService = {
       for (const item of cart) {
         const response = await fetch(`${WP_CONFIG.storeApiUrl}/cart/add-item`, {
           method: 'POST',
-          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(wcNonce ? { 'Nonce': wcNonce } : {}) },
           credentials: 'include', // Puxa o cookie de sessão do usuário,
           cache: 'no-store', // Evita cache para garantir dados frescos
           body: JSON.stringify({
