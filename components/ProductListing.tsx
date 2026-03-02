@@ -11,7 +11,7 @@ interface ProductListingProps {
   onNotifyMe: (productName: string) => void;
   selectedCategory: string | null;
   onClearCategory: () => void;
-  onCategorySelect: (category: string) => void;
+  onCategorySelect: (id: number, name: string) => void;
   onAddToCart?: (product: { id: string; name: string; price?: number; category: string; inStock: boolean }) => void;
   onProductClick?: (product: WCProduct) => void;
   searchTerm?: string;
@@ -106,7 +106,7 @@ export function ProductListing({ onNotifyMe, selectedCategory, onClearCategory, 
         {!searchTerm.trim() && (
           <CategorySidebar 
             onCategorySelect={onCategorySelect}
-            selectedCategory={selectedCategory}
+            selectedCategoryId={selectedCategory}
           />
         )}
 

@@ -28,7 +28,7 @@ export default function AboutPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleCategorySelect = (category: string) => {
+  const handleCategorySelect = (id: number, category: string) => {
     router.push(`/products?category=${encodeURIComponent(category)}`);
   };
 

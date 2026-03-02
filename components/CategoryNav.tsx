@@ -1,47 +1,68 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ChevronDown, Menu } from "lucide-react";
-import { categories } from "@/app/data/categories";
+import { useCategories } from "@/hooks/useCategories";
 
 interface CategoryNavProps {
-  onCategorySelect?: (category: string) => void;
+  onCategorySelect?: (id: number, name: string) => void;
 }
 
 export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // 1. Buscar as categorias da API
+  const { categories, loading } = useCategories();
 
-  const handleCategoryHover = (categoryName: string) => {
-    setActiveCategory(categoryName);
+  // 2. Organizar as categorias (Principais e Subcategorias)
+  const hierarchicalCategories = useMemo(() => {
+    if (!categories.length) return [];
+    
+    // Pegar apenas as categorias raiz (parent === 0 ou inexistente)
+    // Opcional: Filtrar a categoria "Sem Categoria" comum do WP (id 15 por ex, ou filtrar pelo nome)
+    const parents = categories.filter(c => !c.parent || c.parent === 0);
+    
+    return parents.map(parent => ({
+      id: parent.id,
+      name: parent.name,
+      subcategories: categories.filter(c => c.parent === parent.id)
+    })).filter(cat => cat.name !== "Sem categoria"); // Ignora a padrão do WP
+  }, [categories]);
+
+  const handleCategoryHover = (categoryId: number) => {
+    setActiveCategory(categoryId);
   };
 
-  const handleCategoryClick = (categoryName: string) => {
-    const category = categories.find((cat) => cat.name === categoryName);
-    if (category && category.subcategories.length === 0) {
-      onCategorySelect?.(categoryName);
+  const handleCategoryClick = (categoryId: number, categoryName: string, hasSubcategories: boolean) => {
+    if (!hasSubcategories) {
+      onCategorySelect?.(categoryId, categoryName);
       setActiveCategory(null);
     } else {
-      setActiveCategory(activeCategory === categoryName ? null : categoryName);
+      setActiveCategory(activeCategory === categoryId ? null : categoryId);
     }
   };
 
-  const handleSubcategoryClick = (subcategory: string) => {
-    onCategorySelect?.(subcategory);
+  const handleSubcategoryClick = (subId: number, subName: string) => {
+    onCategorySelect?.(subId, subName);
     setActiveCategory(null);
     setIsMobileMenuOpen(false);
   };
 
-  const toggleMobileCategory = (categoryName: string) => {
-    const category = categories.find((cat) => cat.name === categoryName);
-    if (category && category.subcategories.length === 0) {
-      onCategorySelect?.(categoryName);
+  const toggleMobileCategory = (categoryId: number, categoryName: string, hasSubcategories: boolean) => {
+    if (!hasSubcategories) {
+      onCategorySelect?.(categoryId, categoryName);
       setIsMobileMenuOpen(false);
       setActiveCategory(null);
     } else {
-      setActiveCategory(activeCategory === categoryName ? null : categoryName);
+      setActiveCategory(activeCategory === categoryId ? null : categoryId);
     }
   };
+
+  if (loading) {
+    // Esqueleto de carregamento opcional para evitar o "pulo" do layout
+    return <div className="hidden lg:block h-[60px] border-b border-black/10 bg-white sticky top-[73px] md:top-[89px] z-30" />;
+  }
 
   return (
     <>
@@ -52,26 +73,28 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
       >
         <div className="mx-auto max-w-7xl px-6">
           <div className="flex items-center justify-between">
-            {categories.map((category) => (
+            {hierarchicalCategories.map((category) => (
               <button
-                key={category.name}
-                onMouseEnter={() => handleCategoryHover(category.name)}
-                onClick={() => handleCategoryClick(category.name)}
+                key={category.id}
+                onMouseEnter={() => handleCategoryHover(category.id)}
+                onClick={() => handleCategoryClick(category.id, category.name, category.subcategories.length > 0)}
                 className={`group relative flex items-center gap-1 py-5 text-xs tracking-wide transition-colors ${
-                  activeCategory === category.name
+                  activeCategory === category.id
                     ? "text-black"
                     : "text-black/60 hover:text-black"
                 }`}
               >
                 {category.name.toUpperCase()}
-                <ChevronDown 
-                  size={14} 
-                  className={`transition-transform ${
-                    activeCategory === category.name ? "rotate-180" : ""
-                  }`}
-                />
+                {category.subcategories.length > 0 && (
+                  <ChevronDown 
+                    size={14} 
+                    className={`transition-transform ${
+                      activeCategory === category.id ? "rotate-180" : ""
+                    }`}
+                  />
+                )}
                 
-                {activeCategory === category.name && (
+                {activeCategory === category.id && (
                   <div className="absolute bottom-0 left-0 right-0 h-px bg-black" />
                 )}
               </button>
@@ -81,18 +104,18 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
 
         {/* Subcategories Dropdown */}
         {activeCategory && (
-          <div className="border-t border-black/10 bg-white">
+          <div className="border-t border-black/10 bg-white absolute w-full">
             <div className="mx-auto max-w-7xl px-6 py-6">
               <div className="grid grid-cols-4 gap-8">
-                {categories
-                  .find((cat) => cat.name === activeCategory)
+                {hierarchicalCategories
+                  .find((cat) => cat.id === activeCategory)
                   ?.subcategories.map((subcategory) => (
                     <button
-                      key={subcategory}
-                      onClick={() => handleSubcategoryClick(subcategory)}
+                      key={subcategory.id}
+                      onClick={() => handleSubcategoryClick(subcategory.id, subcategory.name)}
                       className="text-left text-sm text-black/60 hover:text-black transition-colors"
                     >
-                      {subcategory}
+                      {subcategory.name}
                     </button>
                   ))}
               </div>
@@ -121,32 +144,34 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
 
         {/* Mobile Categories Dropdown */}
         {isMobileMenuOpen && (
-          <div className="border-t border-black/10 bg-white max-h-[70vh] overflow-y-auto">
+          <div className="border-t border-black/10 bg-white max-h-[70vh] overflow-y-auto absolute w-full shadow-lg">
             <div className="px-4 sm:px-6 py-4">
-              {categories.map((category) => (
-                <div key={category.name} className="mb-4">
+              {hierarchicalCategories.map((category) => (
+                <div key={category.id} className="mb-4">
                   <button
-                    onClick={() => toggleMobileCategory(category.name)}
+                    onClick={() => toggleMobileCategory(category.id, category.name, category.subcategories.length > 0)}
                     className="flex items-center justify-between w-full py-3 text-sm tracking-wide text-black/80 hover:text-black transition-colors"
                   >
                     {category.name.toUpperCase()}
-                    <ChevronDown 
-                      size={16} 
-                      className={`transition-transform ${
-                        activeCategory === category.name ? "rotate-180" : ""
-                      }`}
-                    />
+                    {category.subcategories.length > 0 && (
+                      <ChevronDown 
+                        size={16} 
+                        className={`transition-transform ${
+                          activeCategory === category.id ? "rotate-180" : ""
+                        }`}
+                      />
+                    )}
                   </button>
                   
-                  {activeCategory === category.name && (
+                  {activeCategory === category.id && (
                     <div className="mt-2 pl-4 space-y-2">
                       {category.subcategories.map((subcategory) => (
                         <button
-                          key={subcategory}
-                          onClick={() => handleSubcategoryClick(subcategory)}
+                          key={subcategory.id}
+                          onClick={() => handleSubcategoryClick(subcategory.id, subcategory.name)}
                           className="block w-full text-left py-2 text-sm text-black/60 hover:text-black transition-colors"
                         >
-                          {subcategory}
+                          {subcategory.name}
                         </button>
                       ))}
                     </div>

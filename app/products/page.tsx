@@ -39,8 +39,8 @@ function ProductsContent() {
     setNotifyModalOpen(true);
   };
 
-  const handleCategorySelect = (selectedCategory: string) => {
-    router.push(`/products?category=${encodeURIComponent(selectedCategory)}`);
+  const handleCategorySelect = (id: number, name: string) => {
+    router.push(`/products?category=${encodeURIComponent(name)}`);
   };
 
   const handleClearCategory = () => {

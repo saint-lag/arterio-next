@@ -1,33 +1,68 @@
 'use client';
 
-import { categories } from "@/app/data/categories";
+import { useMemo } from "react";
+import { useCategories } from "@/hooks/useCategories";
 
 interface CategorySidebarProps {
-  onCategorySelect?: (category: string) => void;
-  selectedCategory?: string | null;
+  onCategorySelect?: (id: number, name: string) => void;
+  selectedCategoryId?: string | null;
 }
 
-export function CategorySidebar({ onCategorySelect, selectedCategory }: CategorySidebarProps) {
+export function CategorySidebar({ onCategorySelect, selectedCategoryId }: CategorySidebarProps) {
+  const { categories, loading } = useCategories();
+
+  const hierarchicalCategories = useMemo(() => {
+    if (!categories.length) return [];
+    
+    const parents = categories.filter(c => !c.parent || c.parent === 0);
+    return parents.map(parent => ({
+      id: parent.id,
+      name: parent.name,
+      subcategories: categories.filter(c => c.parent === parent.id)
+    })).filter(cat => cat.name !== "Sem categoria");
+  }, [categories]);
+
+  if (loading) {
+    return (
+      <aside className="hidden lg:block w-64 pr-12 animate-pulse">
+        <div className="space-y-8">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i}>
+              <div className="h-4 bg-black/10 rounded w-24 mb-4" />
+              <div className="space-y-2">
+                <div className="h-3 bg-black/5 rounded w-32" />
+                <div className="h-3 bg-black/5 rounded w-28" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside className="hidden lg:block w-64 pr-12">
       <nav className="space-y-8">
-        {categories.map((category) => (
-          <div key={category.name}>
+        {hierarchicalCategories.map((category) => (
+          <div key={category.id} onClick={() => onCategorySelect?.(category.id, category.name)}>
+            {/* Se o cliente quiser clicar na categoria pai, adicione onClick aqui. 
+                Caso contrário, serve apenas de título. */}
             <h3 className="mb-3 text-sm tracking-wide text-black">
               {category.name.toUpperCase()}
             </h3>
+            
             <ul className="space-y-2">
               {category.subcategories.map((subcategory) => (
-                <li key={subcategory}>
+                <li key={subcategory.id}>
                   <button
-                    onClick={() => onCategorySelect?.(subcategory)}
-                    className={`text-sm transition-colors ${
-                      selectedCategory === subcategory
+                    onClick={() => onCategorySelect?.(subcategory.id, subcategory.name)}
+                    className={`text-sm transition-colors text-left ${
+                      selectedCategoryId === subcategory.id.toString()
                         ? 'text-black font-medium'
                         : 'text-black/60 hover:text-black'
                     }`}
                   >
-                    {subcategory}
+                    {subcategory.name}
                   </button>
                 </li>
               ))}
@@ -37,4 +72,4 @@ export function CategorySidebar({ onCategorySelect, selectedCategory }: Category
       </nav>
     </aside>
   );
-}
+} 
