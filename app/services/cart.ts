@@ -34,6 +34,7 @@ export const cartService = {
    */
   async fetchStoreApi(endpoint: string, options: RequestInit = {}) {
     const token = this.getCartToken();
+    console.log(`API Request: ${options.method || 'GET'} ${endpoint} (Cart-Token: ${token})`); // Log para debug
 
     // Inicializa os headers juntando com os que vieram no options
     const headers = new Headers(options.headers);
@@ -57,14 +58,22 @@ export const cartService = {
     // O WooCommerce pode enviar um token novo na resposta.
     // O header 'Cart-Token' precisa estar exposto via CORS no backend (WordPress).
     const newToken = response.headers.get('Cart-Token');
+
+    console.log(`API Response: ${response.status} ${response.statusText} (New Cart-Token: ${newToken})`); // Log para debug
+
     if (newToken && newToken !== token) {
+      console.log(`Updating Cart-Token: ${newToken}`); // Log para debug
       this.setCartToken(newToken);
     }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.log('API Error Response:', response.status, errorData); // Log para debug
       throw new Error(errorData.message || `Erro da API WooCommerce: ${response.status}`);
     }
+
+    const data = await response.json().catch(() => null);
+    console.log('API Response Data:', data);
 
     return response.json();
   },
