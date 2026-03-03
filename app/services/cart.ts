@@ -47,35 +47,46 @@ export const cartService = {
     if (token) {
       headers.set('Cart-Token', token);
     }
+    try {
+      const response = await fetch(`${WP_CONFIG.storeApiUrl}${endpoint}`, {
+        ...options,
+        headers,
+        cache: 'no-store',
+      });
 
-    const response = await fetch(`${WP_CONFIG.storeApiUrl}${endpoint}`, {
-      ...options,
-      headers,
-      // Desativar cache garante que vemos sempre os dados em tempo real
-      cache: 'no-store',
-    });
+      const newToken = response.headers.get('Cart-Token');
 
-    // O WooCommerce pode enviar um token novo na resposta.
-    // O header 'Cart-Token' precisa estar exposto via CORS no backend (WordPress).
-    const newToken = response.headers.get('Cart-Token');
+      if (newToken && newToken !== token) {
+        this.setCartToken(newToken);
+      }
 
-    console.log(`API Response: ${response.status} ${response.statusText} (New Cart-Token: ${newToken})`); // Log para debug
+      // Se der erro (ex: 400 Bad Request, Produto sem stock)
+      if (!response.ok) {
+        // Lemos como texto apenas UMA VEZ
+        const errorText = await response.text();
+        console.error(`[CartService] ❌ Erro da API (${response.status}):`, errorText);
 
-    if (newToken && newToken !== token) {
-      console.log(`Updating Cart-Token: ${newToken}`); // Log para debug
-      this.setCartToken(newToken);
+        // Tentamos extrair a mensagem de erro amigável do WooCommerce (se for JSON)
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.message || `Erro do WooCommerce: ${response.status}`);
+        } catch {
+          throw new Error(`Erro de comunicação com a loja: ${response.status}`);
+        }
+      }
+
+      // SUCESSO: Lemos o JSON apenas UMA VEZ e guardamos na variável 'data'
+      const data = await response.json();
+
+      console.log(`[CartService] ✅ Resposta da API:`, data);
+
+      // Devolvemos a variável já lida (nunca faças return response.json() aqui)
+      return data;
+
+    } catch (error) {
+      console.error(`[CartService] 🚨 Falha no fetch:`, error);
+      throw error;
     }
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.log('API Error Response:', response.status, errorData); // Log para debug
-      throw new Error(errorData.message || `Erro da API WooCommerce: ${response.status}`);
-    }
-
-    const data = await response.json().catch(() => null);
-    console.log('API Response Data:', data);
-
-    return response.json();
   },
 
   // ==========================================
