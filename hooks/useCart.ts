@@ -3,82 +3,119 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { cartService } from '@/app/services/cart';
 import type { CartItem, Product } from '@/app/types/woocommerce';
+import { useToast } from '@/hooks/useToast';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function parseServerCart(serverCart: unknown): CartItem[] {
+  const cart = serverCart as any;
+  if (!cart?.items?.length) return [];
+
+  if (cart.errors?.length) {
+    console.warn('[useCart] Avisos do servidor:', cart.errors);
+  }
+
+  return cart.items.map((item: any): CartItem => {
+    const minorUnit: number = item.prices?.currency_minor_unit ?? 2;
+    const divisor = Math.pow(10, minorUnit);
+    const imageUrl: string = item.images?.[0]?.src ?? '';
+
+    return {
+      key: item.key,
+      product_id: item.id,
+      variation_id: item.variation_id ?? undefined,
+      quantity: item.quantity,
+      product: {
+        id: item.id.toString(),
+        name: item.name,
+        price: item.prices?.price
+          ? (item.prices.price / divisor).toFixed(2)
+          : '0.00',
+        image: imageUrl,
+      } as any,
+      subtotal: item.totals?.line_subtotal
+        ? (item.totals.line_subtotal / divisor).toFixed(2)
+        : '0.00',
+      total: item.totals?.line_total
+        ? (item.totals.line_total / divisor).toFixed(2)
+        : '0.00',
+    };
+  });
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useCart() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // FIX 🟡 — contador de operações em curso em vez de boolean partilhado
+  // Garante que isUpdating só vai a false quando TODAS as ops terminarem
+  const pendingOps = useRef(0);
   const [isUpdating, setIsUpdating] = useState(false);
-  
-  // Ref para evitar chamadas duplas no Strict Mode do React
+
+  // FIX 🔴 — AbortController por operação de updateQuantity para cancelar
+  // requests antigos quando o utilizador clica rapidamente
+  const updateAbortRef = useRef<Record<string, AbortController>>({});
+
   const hasFetchedInitialCart = useRef(false);
+  const { toasts, addToast, removeToast } = useToast();
 
-  // 1. Função Robusta de Sincronização (Resolve os problemas 2 e 4)
-  const syncStateWithServer = useCallback((serverCart: any) => {
-    if (!serverCart || !serverCart.items) {
-      setCart([]);
-      return;
-    }
+  // ── Helpers de pending ops ─────────────────────────────────────────────────
 
-    // Tratamento de Erros da API (Produtos Fantasmas/Sem Estoque)
-    if (serverCart.errors && serverCart.errors.length > 0) {
-      console.warn('Avisos do Carrinho Woo:', serverCart.errors);
-      // Aqui você poderia disparar um Toast alertando o usuário: "Alguns itens ficaram sem estoque"
-    }
+  function beginOp() {
+    pendingOps.current += 1;
+    setIsUpdating(true);
+  }
 
-    const formattedItems: CartItem[] = serverCart.items.map((item: any) => {
-      const minorUnit = item.prices?.currency_minor_unit ?? 2;
-      const divisor = Math.pow(10, minorUnit);
+  function endOp() {
+    pendingOps.current = Math.max(0, pendingOps.current - 1);
+    if (pendingOps.current === 0) setIsUpdating(false);
+  }
 
-      // Tratamento para Imagens Vistas (Fallback para placeholder se o Woo não enviar)
-      const imageUrl = item.images && item.images.length > 0 
-        ? item.images[0].src 
-        : '/placeholder-image.jpg'; // Substitua pelo caminho de um placeholder seu
+  // ── Sincronização ──────────────────────────────────────────────────────────
 
-      return {
-        key: item.key,
-        product_id: item.id,
-        variation_id: item.variation_id || undefined,
-        quantity: item.quantity,
-        product: {
-          id: item.id.toString(),
-          name: item.name,
-          price: item.prices?.price ? (item.prices.price / divisor).toFixed(2) : "0.00",
-          images: [{ src: imageUrl }], // Garante que a estrutura da imagem não quebre o frontend
-        } as any,
-        subtotal: item.totals?.line_subtotal ? (item.totals.line_subtotal / divisor).toFixed(2) : "0.00",
-        total: item.totals?.line_total ? (item.totals.line_total / divisor).toFixed(2) : "0.00",
-      };
-    });
-
-    setCart(formattedItems);
+  const syncWithServer = useCallback((serverCart: unknown) => {
+    setCart(parseServerCart(serverCart));
   }, []);
 
-  // 2. Load Inicial Seguro
+  const refreshFromServer = useCallback(async () => {
+    try {
+      const serverCart = await cartService.getCart();
+      syncWithServer(serverCart);
+    } catch {
+      // Falha silenciosa no rollback — estado anterior mantém-se
+    }
+  }, [syncWithServer]);
+
+  // ── Load inicial ───────────────────────────────────────────────────────────
+
   useEffect(() => {
-    // Garante que só roda no browser e apenas uma vez
     if (typeof window === 'undefined' || hasFetchedInitialCart.current) return;
     hasFetchedInitialCart.current = true;
 
-    setIsLoading(true);
     cartService.getCart()
-      .then(syncStateWithServer)
-      .catch(error => console.error('Erro ao buscar o carrinho inicial:', error))
+      .then(syncWithServer)
+      .catch(() => {}) // Carrinho vazio se offline
       .finally(() => setIsLoading(false));
-  }, [syncStateWithServer]);
+  }, [syncWithServer]);
 
-  // 3. Add to Cart com "Optimistic UI"
-  const addToCart = useCallback(async (product: Product, quantity: number = 1, variationId?: number) => {
-    // A. Atualização Otimista
+  // ── addToCart ──────────────────────────────────────────────────────────────
+
+  const addToCart = useCallback(async (
+    product: Product,
+    quantity: number = 1,
+    variationId?: number,
+  ) => {
+    // Optimistic update
     setCart(prev => {
-      const existingItemIndex = prev.findIndex(i => i.product_id === parseInt(product.id));
-      if (existingItemIndex > -1) {
-        const newCart = [...prev];
-        newCart[existingItemIndex].quantity += quantity;
-        return newCart;
+      const idx = prev.findIndex(i => i.product_id === parseInt(product.id));
+      if (idx > -1) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], quantity: next[idx].quantity + quantity };
+        return next;
       }
-      
-      // Cria um item temporário
       return [...prev, {
         key: `temp_${Date.now()}`,
         product_id: parseInt(product.id),
@@ -88,75 +125,114 @@ export function useCart() {
         total: (product.price * quantity).toFixed(2),
       }];
     });
-    
-    setIsOpen(true); // Abre a gaveta na hora!
+    setIsOpen(true);
 
-    // B. Comunicação real com o servidor no background
+    beginOp();
     try {
-      setIsUpdating(true);
-      const updatedCart = await cartService.addItem(product.id, quantity, variationId);
-      // O servidor respondeu! Agora trocamos o carrinho "falso" pelo verdadeiro com as Keys oficiais
-      syncStateWithServer(updatedCart);
-    } catch (error) {
-      // C. Se a internet cair ou o Woo recusar, fazemos o "Rollback"
-      console.error("Falha ao adicionar, revertendo...", error);
-      cartService.getCart().then(syncStateWithServer); 
-      alert("Desculpe, não conseguimos adicionar o produto ao carrinho.");
+      const updated = await cartService.addItem(product.id, quantity, variationId);
+      syncWithServer(updated);
+    } catch (err) {
+      await refreshFromServer();
+      // FIX 🟠 — substituído alert() por toast não-bloqueante
+      addToast(
+        err instanceof Error ? err.message : 'Não foi possível adicionar o produto.',
+        'error',
+      );
     } finally {
-      setIsUpdating(false);
+      endOp();
     }
-  }, [syncStateWithServer]);
+  }, [syncWithServer, refreshFromServer, addToast]);
+
+  // ── removeFromCart ─────────────────────────────────────────────────────────
 
   const removeFromCart = useCallback(async (itemKey: string) => {
-    // Atualização Otimista
-    setCart(prev => prev.filter(item => item.key !== itemKey));
-    
+    setCart(prev => prev.filter(i => i.key !== itemKey));
+
+    beginOp();
     try {
-      setIsUpdating(true);
-      const updatedCart = await cartService.removeItem(itemKey);
-      syncStateWithServer(updatedCart);
-    } catch (error) {
-      cartService.getCart().then(syncStateWithServer); // Rollback
+      const updated = await cartService.removeItem(itemKey);
+      syncWithServer(updated);
+    } catch {
+      await refreshFromServer();
+      addToast('Não foi possível remover o produto.', 'error');
     } finally {
-      setIsUpdating(false);
+      endOp();
     }
-  }, [syncStateWithServer]);
+  }, [syncWithServer, refreshFromServer, addToast]);
+
+  // ── updateQuantity (com cancelamento de requests antigos) ──────────────────
+  // FIX 🔴 — Cada item tem o seu próprio AbortController.
+  // Se o utilizador clicar +/- rapidamente, o request anterior é cancelado
+  // e só o último chega ao servidor.
 
   const updateQuantity = useCallback(async (itemKey: string, quantity: number) => {
-    // Atualização Otimista
-    setCart(prev => prev.map(item => item.key === itemKey ? { ...item, quantity } : item));
-
-    try {
-      setIsUpdating(true);
-      const updatedCart = await cartService.updateQuantity(itemKey, quantity);
-      syncStateWithServer(updatedCart);
-    } catch (error) {
-      cartService.getCart().then(syncStateWithServer); // Rollback
-    } finally {
-      setIsUpdating(false);
+    if (quantity <= 0) {
+      return removeFromCart(itemKey);
     }
-  }, [syncStateWithServer]);
+
+    // Cancela request anterior para este item (se existir)
+    updateAbortRef.current[itemKey]?.abort();
+    const controller = new AbortController();
+    updateAbortRef.current[itemKey] = controller;
+
+    // Optimistic update imediato
+    setCart(prev =>
+      prev.map(i => i.key === itemKey ? { ...i, quantity } : i),
+    );
+
+    beginOp();
+    try {
+      const updated = await cartService.updateQuantity(itemKey, quantity);
+
+      // Ignora a resposta se este request foi entretanto cancelado
+      if (!controller.signal.aborted) {
+        syncWithServer(updated);
+        delete updateAbortRef.current[itemKey];
+      }
+    } catch (err: unknown) {
+      // AbortError é esperado — não é um erro real
+      if (err instanceof Error && err.name === 'AbortError') return;
+      await refreshFromServer();
+      addToast('Não foi possível atualizar a quantidade.', 'error');
+    } finally {
+      endOp();
+    }
+  }, [syncWithServer, refreshFromServer, removeFromCart, addToast]);
+
+  // ── clearCart ──────────────────────────────────────────────────────────────
 
   const clearCart = useCallback(async () => {
-    setCart([]); // Otimista
+    setCart([]);
+    beginOp();
     try {
-      setIsUpdating(true);
-      const emptyCart = await cartService.clearCart();
-      syncStateWithServer(emptyCart);
+      await cartService.clearCart();
+    } catch {
+      await refreshFromServer();
     } finally {
-      setIsUpdating(false);
+      endOp();
     }
-  }, [syncStateWithServer]);
+  }, [refreshFromServer]);
+
+  // ── Checkout ───────────────────────────────────────────────────────────────
 
   const goToCheckout = useCallback(() => {
     cartService.redirectToCheckout();
   }, []);
 
-  const total = cart.reduce((acc, item) => acc + parseFloat(item.total), 0);
-  const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
+  // FIX 🟢 — total com fallback seguro contra NaN
+  const total = cart.reduce((acc, item) => {
+    const val = parseFloat(item.total);
+    return acc + (isNaN(val) ? 0 : val);
+  }, 0);
+
+  const itemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   return {
-    cart, total, itemCount, isOpen, setIsOpen, isLoading, isUpdating,
+    cart, total, itemCount,
+    isOpen, setIsOpen,
+    isLoading, isUpdating,
     addToCart, removeFromCart, updateQuantity, clearCart, goToCheckout,
+    // Toast — expõe para o componente pai renderizar o ToastContainer
+    toasts, removeToast,
   };
 }

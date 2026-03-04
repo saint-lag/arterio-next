@@ -10,6 +10,7 @@ import { NotifyMeModal } from "@/components/NotifyMeModal";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ProductListing } from "@/components/ProductListing";
 import { useCart } from "@/hooks/useCart";
+import { ToastContainer } from "@/components/ToastContainer";
 
 function ProductsContent() {
   const router = useRouter();
@@ -25,7 +26,7 @@ function ProductsContent() {
 
   const {
     cart, total, itemCount, isOpen: cartOpen, setIsOpen: setCartOpen,
-    addToCart, removeFromCart, updateQuantity, goToCheckout,
+    addToCart, removeFromCart, updateQuantity, goToCheckout, toasts, removeToast
   } = useCart();
 
   const handleNotifyMe = (productName: string) => {
@@ -73,7 +74,10 @@ function ProductsContent() {
         searchTerm={search || ""}
       />
 
+
       <WhatsAppButton />
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <Cart
         isOpen={cartOpen} onClose={() => setCartOpen(false)}

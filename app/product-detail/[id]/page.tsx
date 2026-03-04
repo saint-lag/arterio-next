@@ -11,6 +11,8 @@ import { Footer } from '@/components/Footer';
 import { CategoryNav } from '@/components/CategoryNav';
 import { Cart } from '@/components/Cart';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from '@/components/ToastContainer';
 
 interface ProductDetailPageProps {
   params: {
@@ -21,7 +23,7 @@ interface ProductDetailPageProps {
 export default function ProductDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const { addToCart, cart, total, itemCount, isOpen: cartOpen, setIsOpen: setCartOpen, removeFromCart, updateQuantity, goToCheckout } = useCart();
+  const { addToCart, cart, total, itemCount, isOpen: cartOpen, setIsOpen: setCartOpen, removeFromCart, updateQuantity, goToCheckout, toasts, removeToast } = useCart();
   
   const [product, setProduct] = useState<WCProduct | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -307,6 +309,8 @@ export default function ProductDetailPage() {
       </div>
 
       <WhatsAppButton />
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <Cart
         isOpen={cartOpen}

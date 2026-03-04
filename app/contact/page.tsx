@@ -11,12 +11,13 @@ import { Cart } from "@/components/Cart";
 import { NotifyMeModal } from "@/components/NotifyMeModal";
 import { useCart } from "@/hooks/useCart";
 import { useRouter } from "next/navigation";
+import { ToastContainer } from "@/components/ToastContainer";
 
 const About = () => <div></div>;
 
 export default function ContactPage() {
   const router = useRouter();
-  const { addToCart, cart, total, itemCount, isOpen: cartOpen, setIsOpen: setCartOpen, removeFromCart, updateQuantity, goToCheckout } = useCart();
+  const { addToCart, cart, total, itemCount, isOpen: cartOpen, setIsOpen: setCartOpen, removeFromCart, updateQuantity, goToCheckout, toasts, removeToast } = useCart();
   const navigateTo = (path: string) => router.push(path);
   const handleSearch = (query: string) => console.log(query);
   const handleCategorySelect = (category: string) => console.log(category);
@@ -34,6 +35,8 @@ export default function ContactPage() {
       <About />
 
       <WhatsAppButton />
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <Footer onNavigate={navigateTo} />
     </div>

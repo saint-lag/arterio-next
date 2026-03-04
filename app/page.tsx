@@ -10,6 +10,8 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { Home } from "@/components/Home";
 import { useCart } from "@/hooks/useCart";
 import { useRouter } from "next/navigation";
+import { ToastContainer } from '@/components/ToastContainer';
+
 
 export default function HomePage() {
   const router = useRouter();
@@ -26,6 +28,8 @@ export default function HomePage() {
     removeFromCart,
     updateQuantity,
     goToCheckout,
+    toasts,
+    removeToast
   } = useCart();
 
   const handleNotifyMe = (productName: string) => {
@@ -71,6 +75,9 @@ export default function HomePage() {
       />
 
       <WhatsAppButton />
+
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <Cart
         isOpen={cartOpen}

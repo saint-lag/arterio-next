@@ -8,6 +8,7 @@ import { About } from "@/components/About";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/hooks/useCart";
 import { Cart } from "@/components/Cart";
+import { ToastContainer } from "@/components/ToastContainer";
 
 export default function AboutPage() {
   const router = useRouter();
@@ -21,6 +22,8 @@ export default function AboutPage() {
     removeFromCart,
     updateQuantity,
     goToCheckout,
+    toasts,
+    removeToast
   } = useCart();
 
   const navigateTo = (page: string) => {
@@ -52,6 +55,8 @@ export default function AboutPage() {
       <About />
 
       <WhatsAppButton />
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <Cart
         isOpen={cartOpen}
