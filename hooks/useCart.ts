@@ -54,7 +54,7 @@ export function useCart() {
     setCart(formattedItems);
   }, []);
 
-  // 2. Load Inicial Seguro (Resolve o problema 1)
+  // 2. Load Inicial Seguro
   useEffect(() => {
     // Garante que só roda no browser e apenas uma vez
     if (typeof window === 'undefined' || hasFetchedInitialCart.current) return;
@@ -67,9 +67,9 @@ export function useCart() {
       .finally(() => setIsLoading(false));
   }, [syncStateWithServer]);
 
-  // 3. Add to Cart com "Optimistic UI" (Resolve o problema 3)
+  // 3. Add to Cart com "Optimistic UI"
   const addToCart = useCallback(async (product: Product, quantity: number = 1, variationId?: number) => {
-    // A. Atualização Otimista: Engana o usuário para parecer instantâneo!
+    // A. Atualização Otimista
     setCart(prev => {
       const existingItemIndex = prev.findIndex(i => i.product_id === parseInt(product.id));
       if (existingItemIndex > -1) {

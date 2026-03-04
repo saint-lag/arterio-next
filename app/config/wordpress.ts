@@ -1,11 +1,9 @@
 // Configuração Limpa para WooCommerce Store API
-const wpUrl = process.env.NEXT_PUBLIC_WP_URL || 'https://arterio.com.br/wp';
+const wpUrl = process.env.NEXT_PUBLIC_WP_URL;
 
 export const WP_CONFIG = {
   siteUrl: wpUrl,
-  
-  // Store API v1 (Pública, segura e feita para Frontends)
-  storeApiUrl: `${wpUrl}/wp-json/wc/store/v1`,
-  
+  // storeApiUrl: `${wpUrl}/wp-json/wc/store/v1`, <-- O ANTIGO
+  storeApiUrl: '/api/wp/wc/store/v1', // <-- O NOVO (Aponta para o próprio Next.js)
   checkoutUrl: `${wpUrl}/checkout`,
 };

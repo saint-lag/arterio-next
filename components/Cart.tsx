@@ -2,6 +2,7 @@
 
 import { X, Minus, Plus, ShoppingBag } from "lucide-react";
 import type { CartItem } from "@/types/woocommerce";
+import { decodeHTMLEntities } from "@/utils/formatters";
 
 interface CartProps {
   isOpen: boolean;
@@ -83,7 +84,7 @@ export function Cart({
                     {/* Product Info */}
                     <div className="flex flex-1 flex-col">
                       <h3 className="text-sm text-black mb-1">
-                        {item.product.name}
+                        {decodeHTMLEntities(item.product.name)}
                       </h3>
                       <p className="text-xs text-black/60 mb-3">
                         R$ {parseFloat((item.product as any).price).toFixed(2)}

@@ -47,20 +47,16 @@ export default function ProductDetailPage() {
     const fetchProduct = async () => {
       try {
         setIsLoading(true);
-        console.log('Fetching product:', productId);
         const response = await fetch(`/api/products/${productId}`);
         
-        console.log('Response status:', response.status);
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Produto não encontrado');
         }
 
         const data = await response.json();
-        console.log('Product loaded:', data);
         setProduct(data);
       } catch (err) {
-        console.error('Error loading product:', err);
         setError(err instanceof Error ? err.message : 'Erro ao carregar produto');
       } finally {
         setIsLoading(false);
