@@ -1,41 +1,36 @@
 // ─── Cart Service ─────────────────────────────────────────────────────────────
-// Responsabilidade única: comunicar com a WooCommerce Store API via proxy Next.js.
-// Toda a gestão de estado fica no hook useCart (SWR).
+// Comunica com a WooCommerce Store API via proxy Next.js.
+// O Cart-Token vive no localStorage e é injectado como header em cada request.
+// O checkout é tratado internamente pelo Next.js (/checkout).
 // ──────────────────────────────────────────────────────────────────────────────
 
-const CART_TOKEN_KEY = 'arterio_cart_token';
+export const CART_TOKEN_LS_KEY = 'arterio_cart_token'; // exportado para o checkoutApi reutilizar
 const CART_API_BASE = '/api/cart';
 
-// ─── Token Management ─────────────────────────────────────────────────────────
-// O token vive em duas fontes:
-//   1. Cookie HttpOnly (definido pelo proxy) — usado pelo servidor no checkout
-//   2. localStorage — usado pelo cliente JS para injetar no header Cart-Token
-//
-// O proxy é a fonte de verdade. O localStorage é apenas um cache do cliente.
+// ─── Token ────────────────────────────────────────────────────────────────────
 
-function getToken(): string | null {
+export function getCartToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(CART_TOKEN_KEY);
+  return localStorage.getItem(CART_TOKEN_LS_KEY);
 }
 
 function saveToken(token: string): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(CART_TOKEN_KEY, token);
+  localStorage.setItem(CART_TOKEN_LS_KEY, token);
 }
 
-function clearToken(): void {
+export function clearToken(): void {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem(CART_TOKEN_KEY);
+  localStorage.removeItem(CART_TOKEN_LS_KEY);
 }
 
-// ─── Core Fetcher ─────────────────────────────────────────────────────────────
-// Usado pelo SWR e pelas mutações. Gere o Cart-Token automaticamente.
+// ─── Core fetcher ─────────────────────────────────────────────────────────────
 
 async function request<T = unknown>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const token = getToken();
+  const token = getCartToken();
 
   const headers = new Headers(options.headers);
   headers.set('Content-Type', 'application/json');
@@ -48,31 +43,23 @@ async function request<T = unknown>(
     credentials: 'include',
   });
 
-  // Persiste o token se a API devolver um novo
   const newToken = response.headers.get('Cart-Token');
-  if (newToken && newToken !== token) {
-    saveToken(newToken);
-  }
+  if (newToken && newToken !== token) saveToken(newToken);
 
   if (!response.ok) {
     const text = await response.text();
     let message = `Erro ${response.status}`;
-    try {
-      message = JSON.parse(text)?.message ?? message;
-    } catch {
-      // usa o fallback
-    }
+    try { message = JSON.parse(text)?.message ?? message; } catch { /* fallback */ }
     throw new Error(message);
   }
 
   return response.json() as Promise<T>;
 }
 
-// ─── API Actions ──────────────────────────────────────────────────────────────
+// ─── API ──────────────────────────────────────────────────────────────────────
 
 export const cartApi = {
-  /** Fetcher compatível com SWR — chave é a própria URL do endpoint */
-  fetcher: () => request('/cart'),
+  fetcher: (): Promise<unknown> => request('/cart'),
 
   addItem: (productId: number | string, quantity: number, variationId?: number) =>
     request('/cart/add-item', {
@@ -99,9 +86,7 @@ export const cartApi = {
   clearToken,
 
   redirectToCheckout: () => {
-    // O Cart-Token agora viaja como cookie HttpOnly (definido pelo proxy).
-    // O WooCommerce lê-o automaticamente — não precisamos de query string.
-    const base = `${process.env.NEXT_PUBLIC_WP_URL}/checkout`;
-    window.location.href = base;
+    // Checkout interno — sem redirect cross-domain
+    window.location.href = '/checkout';
   },
 };

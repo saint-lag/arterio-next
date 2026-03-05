@@ -1,15 +1,12 @@
 'use client';
 
-// ─── useCart (powered by SWR) ─────────────────────────────────────────────────
+// ─── useCart ──────────────────────────────────────────────────────────────────
 //
-// Estratégia de mutação: "write-through" sem optimistic updates.
-//
-// O WooCommerce devolve o carrinho COMPLETO em cada resposta de mutação
-// (add, update, remove). Então basta popular o cache SWR com essa resposta
-// diretamente — sem precisar de reconstructores otimistas que causam flashes.
-//
-// Fluxo: chamada API → resposta com carrinho atualizado → mutate(data, false)
-// O `false` diz ao SWR "aceita este dado, não revalides" → zero flashes.
+// Regras de mutação:
+//   1. Cada acção (add/update/remove) chama a API e recebe o carrinho completo
+//   2. Esse carrinho é injectado no cache SWR com revalidate:false (sem re-fetch)
+//   3. keepPreviousData:false garante que não há "flashes" de dados antigos
+//   4. Em caso de erro, força revalidação para garantir estado correcto
 //
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -20,10 +17,10 @@ import { normalizeCart, normalizeTotal } from '@/utils/cartNormalizer';
 import { useToast } from '@/hooks/useToast';
 import type { CartItem, Product } from '@/app/types/woocommerce';
 
-const CART_KEY = '/cart';
+const CART_KEY = 'cart';
 
 export function useCart() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen,     setIsOpen]     = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
 
@@ -32,20 +29,23 @@ export function useCart() {
     isLoading,
     mutate,
   } = useSWR(CART_KEY, cartApi.fetcher, {
-    revalidateOnFocus: true,
+    revalidateOnFocus:    true,
     revalidateOnReconnect: true,
-    refreshInterval: 0,
-    keepPreviousData: true,
-    onError: () => {},
+    // CRÍTICO: false evita mostrar dados antigos enquanto carrega os novos
+    keepPreviousData: false,
+    refreshInterval:  0,
+    onError: () => {
+      // Em caso de erro silencioso, não bloquear a UI
+    },
   });
 
-  const cart: CartItem[] = normalizeCart(serverCart);
-  const total: number = normalizeTotal(serverCart);
-  const itemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const cart:      CartItem[] = normalizeCart(serverCart);
+  const total:     number     = normalizeTotal(serverCart);
+  const itemCount: number     = cart.reduce((acc, item) => acc + item.quantity, 0);
 
-  // ── Helper: executa uma ação de API e popula o cache com a resposta ─────────
-  // revalidate: false → SWR não faz re-fetch, usa o dado que lhe passámos
-  // Isto evita o ciclo: optimistic → flash vazio → dados reais
+  // ── Helper central de mutação ─────────────────────────────────────────────
+  // A API do WooCommerce devolve o carrinho completo em CADA resposta de mutação.
+  // Usamos esse dado directamente no cache — sem optimistic updates que causam flashes.
 
   const runMutation = useCallback(async (
     action: () => Promise<unknown>,
@@ -54,10 +54,11 @@ export function useCart() {
     setIsUpdating(true);
     try {
       const updatedCart = await action();
-      // Popula o cache SWR diretamente com a resposta — sem re-fetch
+      // Injecta o carrinho actualizado no SWR sem fazer re-fetch
+      // revalidate:false é crítico — evita o ciclo: dados novos → re-fetch → dados antigos
       await mutate(updatedCart, { revalidate: false });
     } catch (err) {
-      // Em caso de erro, revalida do servidor para garantir estado correto
+      // Em erro, força re-fetch do servidor para garantir estado real
       await mutate();
       addToast(
         err instanceof Error ? err.message : errorMessage,
@@ -88,7 +89,7 @@ export function useCart() {
     if (quantity <= 0) return removeFromCart(key);
     await runMutation(
       () => cartApi.updateItem(key, quantity),
-      'Não foi possível atualizar a quantidade.',
+      'Não foi possível actualizar a quantidade.',
     );
   }, [runMutation]);
 
