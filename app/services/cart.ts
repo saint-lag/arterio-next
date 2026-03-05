@@ -1,13 +1,12 @@
 // ─── Cart Service ─────────────────────────────────────────────────────────────
 // Comunica com a WooCommerce Store API via proxy Next.js.
 // O Cart-Token vive no localStorage e é injectado como header em cada request.
-// O checkout é tratado internamente pelo Next.js (/checkout).
 // ──────────────────────────────────────────────────────────────────────────────
 
-export const CART_TOKEN_LS_KEY = 'arterio_cart_token'; // exportado para o checkoutApi reutilizar
+export const CART_TOKEN_LS_KEY = 'arterio_cart_token'; // partilhado com checkoutApi
 const CART_API_BASE = '/api/cart';
 
-// ─── Token ────────────────────────────────────────────────────────────────────
+// ─── Token helpers ────────────────────────────────────────────────────────────
 
 export function getCartToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -43,6 +42,7 @@ async function request<T = unknown>(
     credentials: 'include',
   });
 
+  // Persiste token novo sempre que a API devolver um
   const newToken = response.headers.get('Cart-Token');
   if (newToken && newToken !== token) saveToken(newToken);
 
@@ -59,13 +59,19 @@ async function request<T = unknown>(
 // ─── API ──────────────────────────────────────────────────────────────────────
 
 export const cartApi = {
+  /** Fetcher usado pelo SWR — devolve o carrinho completo */
   fetcher: (): Promise<unknown> => request('/cart'),
 
+  /**
+   * Adiciona item ao carrinho.
+   * FIX: garante que o productId é sempre enviado como número inteiro.
+   * A Store API do WooCommerce espera um inteiro no campo "id".
+   */
   addItem: (productId: number | string, quantity: number, variationId?: number) =>
     request('/cart/add-item', {
       method: 'POST',
       body: JSON.stringify({
-        id: productId,
+        id: typeof productId === 'string' ? parseInt(productId, 10) : productId,
         quantity,
         ...(variationId ? { variation_id: variationId } : {}),
       }),
@@ -83,10 +89,16 @@ export const cartApi = {
       body: JSON.stringify({ key }),
     }),
 
+  /**
+   * Limpa todos os itens do carrinho de uma só vez.
+   * Usa DELETE /cart/items (WooCommerce Store API v1) em vez de N chamadas removeItem.
+   */
+  clearItems: (): Promise<unknown> =>
+    request('/cart/items', { method: 'DELETE' }),
+
   clearToken,
 
   redirectToCheckout: () => {
-    // Checkout interno — sem redirect cross-domain
     window.location.href = '/checkout';
   },
 };

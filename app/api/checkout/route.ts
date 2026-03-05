@@ -4,10 +4,15 @@ const WP_STORE_API = `${process.env.NEXT_PUBLIC_WP_URL}/wp-json/wc/store/v1`;
 
 async function proxyCheckout(request: NextRequest, endpoint: string) {
   const cartToken = request.headers.get('Cart-Token');
+  // FIX: ler o nonce enviado pelo cliente (guardado em memória no checkoutApi)
+  // O WooCommerce exige X-WC-Store-API-Nonce no POST /checkout — sem ele, rejeita o pedido.
+  const nonce = request.headers.get('Nonce') ?? request.headers.get('X-WC-Store-API-Nonce');
 
   const headers = new Headers();
   headers.set('Content-Type', 'application/json');
   if (cartToken) headers.set('Cart-Token', cartToken);
+  // FIX: reencaminhar o nonce para o WooCommerce com o header correto
+  if (nonce) headers.set('X-WC-Store-API-Nonce', nonce);
 
   const init: RequestInit = { method: request.method, headers };
 
@@ -26,9 +31,9 @@ async function proxyCheckout(request: NextRequest, endpoint: string) {
     const newToken = wooRes.headers.get('Cart-Token');
     if (newToken) resHeaders.set('Cart-Token', newToken);
 
-    // Nonce devolvido pelo WooCommerce — o cliente deve guardá-lo e reenviá-lo no POST
-    const nonce = wooRes.headers.get('Nonce') ?? wooRes.headers.get('X-WC-Store-API-Nonce');
-    if (nonce) resHeaders.set('Nonce', nonce);
+    // Nonce devolvido pelo WooCommerce no GET — o cliente guarda-o e reenvia-o no POST
+    const resNonce = wooRes.headers.get('Nonce') ?? wooRes.headers.get('X-WC-Store-API-Nonce');
+    if (resNonce) resHeaders.set('Nonce', resNonce);
 
     return new NextResponse(data, { status: wooRes.status, headers: resHeaders });
   } catch (error) {
@@ -37,12 +42,12 @@ async function proxyCheckout(request: NextRequest, endpoint: string) {
   }
 }
 
-// GET /api/checkout → lê estado do checkout (inclui nonce no response header)
+// GET /api/checkout → lê estado do checkout (devolve nonce no response header)
 export async function GET(request: NextRequest) {
   return proxyCheckout(request, 'checkout');
 }
 
-// POST /api/checkout → submete pedido
+// POST /api/checkout → submete pedido (exige Cart-Token + X-WC-Store-API-Nonce)
 export async function POST(request: NextRequest) {
   return proxyCheckout(request, 'checkout');
 }
