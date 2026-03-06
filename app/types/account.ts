@@ -34,6 +34,19 @@ export interface WCOrderItem {
   image?: { src: string };
 }
 
+export interface TrackingItem {
+  tracking_provider: string;
+  tracking_number: string;
+  tracking_link?: string;
+  date_shipped?: string;
+}
+
+export interface WCOrderMeta {
+  id: number;
+  key: string;
+  value: unknown;
+}
+
 export interface WCOrder {
   id: number;
   number: string;
@@ -46,7 +59,8 @@ export interface WCOrder {
   shipping: WCAddress;
   payment_method_title: string;
   customer_note?: string;
-  tracking_number?: string;
+  meta_data?: WCOrderMeta[];
+  tracking?: TrackingItem[];
 }
 
 // Payload para PUT /api/account/profile

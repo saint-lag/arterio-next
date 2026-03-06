@@ -7,6 +7,8 @@ const WC_AUTH = (WC_KEY && WC_SECRET)
   ? 'Basic ' + Buffer.from(`${WC_KEY}:${WC_SECRET}`).toString('base64')
   : '';
 
+import { extractTracking } from '@/utils/extractTracking';
+
 function getAuthToken(request: NextRequest): string | null {
   return request.cookies.get('wp_auth_token')?.value ?? null;
 }
@@ -62,8 +64,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Normalizar tracking em cada pedido
+  const orders = (data as Record<string, unknown>[]).map(extractTracking);
+
   const totalPages = res.headers.get('X-WP-TotalPages') ?? '1';
-  return NextResponse.json(data, {
+  return NextResponse.json(orders, {
     headers: { 'X-WP-TotalPages': totalPages },
   });
 }
