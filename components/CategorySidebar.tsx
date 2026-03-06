@@ -20,7 +20,7 @@ export function CategorySidebar({ onCategorySelect, selectedCategoryId }: Catego
       id: parent.id,
       name: parent.name,
       subcategories: categories.filter(c => c.parent === parent.id)
-    })).filter(cat => cat.name !== "Sem categoria");
+    })).filter(cat => cat.name !== "Uncategorized");
   }, [categories]);
 
   if (loading) {

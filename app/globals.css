@@ -1,4 +1,4 @@
-@import 'tailwindcss' source(none);
+@import 'tailwindcss';
 @source '../**/*.{js,ts,jsx,tsx}';
 
 @custom-variant dark (&:is(.dark *));
@@ -172,6 +172,27 @@
 
   button {
     font-weight: var(--font-weight-medium);
+  }
+
+  /* Pega links, botões e elementos com atributo role="button" */
+  a,
+  button,
+  input[type="button"],
+  input[type="submit"],
+  [role="button"] {
+    cursor: pointer;
+    /* Garante a "mãozinha" do mouse */
+    transition: all 0.3s ease;
+  }
+
+  /* O que acontece no hover de todos eles */
+  a:hover,
+  button:hover,
+  input[type="button"]:hover,
+  input[type="submit"]:hover,
+  [role="button"]:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
   }
 
   input,

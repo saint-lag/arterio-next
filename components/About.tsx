@@ -1,6 +1,22 @@
 'use client';
 
+import { useMemo } from "react";
+import { useCategories } from "@/hooks/useCategories";
+
 export function About() {
+  const { categories } = useCategories();
+
+  const hierarchicalCategories = useMemo(() => {
+      if (!categories.length) return [];
+      
+      const parents = categories.filter(c => !c.parent || c.parent === 0);
+      return parents.map(parent => ({
+        id: parent.id,
+        name: parent.name,
+        subcategories: categories.filter(c => c.parent === parent.id)
+      })).filter(cat => cat.name !== "Uncategorized");
+    }, [categories]);
+
   return (
     <main className="mx-auto max-w-4xl px-6 py-24">
       {/* Hero Section */}
@@ -73,22 +89,13 @@ export function About() {
           NOSSAS CATEGORIAS
         </h2>
         <div className="grid gap-4 md:grid-cols-2">
-          {[
-            "Organização e Fixação",
-            "Fitas Adesivas",
-            "Elétrica e Conectores",
-            "Pilhas e Baterias",
-            "Químicos e Sprays",
-            "Papelaria",
-            "Higiene e Proteção",
-            "Ferramentas e Set"
-          ].map((category) => (
+          {hierarchicalCategories.map((category) => (
             <div 
-              key={category}
+              key={category.id}
               className="border border-black/10 p-6 hover:border-black/30 transition-colors"
             >
               <p className="text-sm tracking-wide text-black/80">
-                {category}
+                {category.name}
               </p>
             </div>
           ))}
