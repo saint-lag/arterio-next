@@ -192,6 +192,19 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                             ? (isLoginView ? 'ENTRANDO...' : 'CRIANDO...') 
                             : (isLoginView ? 'ENTRAR' : 'CRIAR CONTA')}
                     </button>
+
+                    {isLoginView && (
+                        <div className="text-center mt-4">
+                            <a
+                                href={`${process.env.NEXT_PUBLIC_WP_URL}/my-account-2/lost-password/`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-black/50 hover:text-black transition-colors underline underline-offset-2"
+                            >
+                                Esqueceu sua senha?
+                            </a>
+                        </div>
+                    )}
                 </form>
             </div>
         </div>

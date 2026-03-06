@@ -34,8 +34,19 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
 
     if (!response.ok) {
+      // WooCommerce retorna HTML com tags <strong>, <a>, etc.
+      // Extrair apenas o texto limpo e mapear para mensagens amigáveis
+      const rawMessage = (data.message || '').replace(/<[^>]*>/g, '').trim();
+
+      let friendlyError = 'Email ou senha inválidos.';
+      if (rawMessage.includes('senha') && rawMessage.includes('incorreta')) {
+        friendlyError = 'Senha incorreta. Verifique e tente novamente.';
+      } else if (rawMessage.includes('desconhecido') || rawMessage.includes('unknown')) {
+        friendlyError = 'Nenhuma conta encontrada com este e-mail.';
+      }
+
       return NextResponse.json(
-        { error: data.message || 'Email ou senha inválidos' },
+        { error: friendlyError },
         { status: 401 }
       );
     }
