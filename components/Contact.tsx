@@ -1,6 +1,6 @@
 import { useState } from "react";
-
 import { Mail, Phone, MapPin, Clock } from "lucide-react";
+import { STORE_INFO } from "@/app/config/store";
 
 export function Contact() {
   const [formData, setFormData] = useState({
@@ -34,9 +34,14 @@ export function Contact() {
             <div className="flex gap-4">
               <Phone size={20} strokeWidth={1.5} className="text-black/60 flex-shrink-0" />
               <div>
-                <h3 className="text-sm tracking-wide text-black mb-2">TELEFONE</h3>
-                <p className="text-sm text-black/60">(11) 99999-9999</p>
-                <p className="text-xs text-black/40 mt-1">WhatsApp disponível</p>
+                <h3 className="text-sm tracking-wide text-black mb-2">TELEFONES</h3>
+                {STORE_INFO.phones.map((phone, index) => (
+                  <div key={index} className="mb-2 last:mb-0">
+                    <p className="text-sm text-black/60">{phone.display}</p>
+                    <p className="text-xs text-black/40">{phone.label}</p>
+                  </div>
+                ))}
+                <p className="text-xs text-black/40 mt-2">WhatsApp disponível</p>
               </div>
             </div>
 
@@ -44,7 +49,7 @@ export function Contact() {
               <Mail size={20} strokeWidth={1.5} className="text-black/60 flex-shrink-0" />
               <div>
                 <h3 className="text-sm tracking-wide text-black mb-2">EMAIL</h3>
-                <p className="text-sm text-black/60">contato@arterio.com.br</p>
+                <p className="text-sm text-black/60">{STORE_INFO.email.general}</p>
               </div>
             </div>
 
@@ -53,9 +58,11 @@ export function Contact() {
               <div>
                 <h3 className="text-sm tracking-wide text-black mb-2">LOCALIZAÇÃO</h3>
                 <p className="text-sm text-black/60">
-                  Rio de Janeiro - RJ
+                  {STORE_INFO.address.street},  {STORE_INFO.address.neighborhood}, {STORE_INFO.address.zipCode}
                   <br />
-                  Retirada no local disponível
+                  {STORE_INFO.address.city} - {STORE_INFO.address.state}
+                  <br />
+                  {STORE_INFO.address.notes}
                 </p>
               </div>
             </div>
@@ -65,11 +72,11 @@ export function Contact() {
               <div>
                 <h3 className="text-sm tracking-wide text-black mb-2">HORÁRIO</h3>
                 <p className="text-sm text-black/60">
-                  Segunda a Sexta: 9h às 18h
+                  {STORE_INFO.hours.weekdays}
                   <br />
-                  Sábado: 9h às 13h
+                  {STORE_INFO.hours.saturday}
                   <br />
-                  Domingo: Fechado
+                  {STORE_INFO.hours.sunday}
                 </p>
               </div>
             </div>

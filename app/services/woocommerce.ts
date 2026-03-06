@@ -1,5 +1,6 @@
 import { WP_CONFIG } from '../config/wordpress';
 import type { WCProduct, WCCategory, Product } from '../types/woocommerce';
+import { decodeHTMLEntities } from '@/utils/formatters';
 
 // Helper limpo para fazer requests à Store API
 async function storeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -61,16 +62,16 @@ export function mapWCProductToLocal(storeProduct: any): Product {
 
   return {
     id: storeProduct.id.toString(),
-    name: storeProduct.name,
+    name: decodeHTMLEntities(storeProduct.name),
     price: price,
-    category: storeProduct.categories?.[0]?.name || 'Sem Categoria',
+    category: decodeHTMLEntities(storeProduct.categories?.[0]?.name || 'Sem Categoria'),
     inStock: storeProduct.is_in_stock, 
     image: storeProduct.images?.[0]?.src,
     sku: storeProduct.sku,
-    description: storeProduct.short_description || storeProduct.description,
+    description: decodeHTMLEntities(storeProduct.short_description || storeProduct.description || ''),
     variants: storeProduct.attributes?.map((attr: any) => ({
-      name: attr.name,
-      value: attr.terms?.map((t: any) => t.name).join(', ')
+      name: decodeHTMLEntities(attr.name),
+      value: decodeHTMLEntities(attr.terms?.map((t: any) => t.name).join(', ') || '')
     })) || [],
   };
 }

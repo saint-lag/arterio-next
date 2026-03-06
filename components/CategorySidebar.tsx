@@ -45,27 +45,36 @@ export function CategorySidebar({ onCategorySelect, selectedCategoryId }: Catego
     <aside className="hidden lg:block w-64 pr-12">
       <nav className="space-y-8">
         {hierarchicalCategories.map((category) => (
-          <div key={category.id} onClick={() => onCategorySelect?.(category.id.toString(), category.name)}>
-            <h3 className="mb-3 text-sm tracking-wide text-black">
+          <div key={category.id}>
+            <button
+              onClick={() => onCategorySelect?.(category.id.toString(), category.name)}
+              className={`mb-3 text-sm tracking-wide text-left transition-colors ${
+                selectedCategoryId === category.id.toString()
+                  ? 'text-black font-medium'
+                  : 'text-black hover:text-black/60'
+              }`}
+            >
               {category.name.toUpperCase()}
-            </h3>
+            </button>
             
-            <ul className="space-y-2">
-              {category.subcategories.map((subcategory) => (
-                <li key={subcategory.id}>
-                  <button
-                    onClick={() => onCategorySelect?.(subcategory.id.toString(), subcategory.name)}
-                    className={`text-sm transition-colors text-left ${
-                      selectedCategoryId === subcategory.id.toString()
-                        ? 'text-black font-medium'
-                        : 'text-black/60 hover:text-black'
-                    }`}
-                  >
-                    {subcategory.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            {category.subcategories.length > 0 && (
+              <ul className="space-y-2">
+                {category.subcategories.map((subcategory) => (
+                  <li key={subcategory.id}>
+                    <button
+                      onClick={() => onCategorySelect?.(subcategory.id.toString(), subcategory.name)}
+                      className={`text-sm transition-colors text-left ${
+                        selectedCategoryId === subcategory.id.toString()
+                          ? 'text-black font-medium'
+                          : 'text-black/60 hover:text-black'
+                      }`}
+                    >
+                      {subcategory.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </nav>

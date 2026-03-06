@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const response = await fetch(`${wpUrl}/wp-json/wp/v2/users/me`, {
       method: 'GET',
       headers: {
-        'Authorization': `Basic ${token}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });

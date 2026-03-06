@@ -194,6 +194,12 @@ export const cartApi = {
     handoffUrl.searchParams.set('cart_token', token);
     handoffUrl.searchParams.set('redirect', WP_CONFIG.checkoutUrl!);
 
+    // Limpa o token ANTES do redirect — o session-handoff já copia o carrinho
+    // para uma sessão WC com cookies, então o token headless não é mais necessário.
+    // Sem isto, ao voltar do checkout o SWR re-fetcha a sessão headless antiga
+    // (que ainda contém os itens) e o carrinho "reaparece".
+    clearToken();
+
     // Redirect direto - o WordPress define os cookies e redireciona pro checkout
     window.location.href = handoffUrl.toString();
   },

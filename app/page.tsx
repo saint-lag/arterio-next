@@ -38,8 +38,11 @@ export default function HomePage() {
     setNotifyModalOpen(true);
   };
 
-  const handleCategorySelect = (category: string) => {
-    router.push(`/products?category=${encodeURIComponent(category)}`);
+  const handleCategorySelect = (categoryId: string, categoryName?: string) => {
+    const params = new URLSearchParams();
+    params.set('categoryId', categoryId);
+    if (categoryName) params.set('categoryName', categoryName);
+    router.push(`/products?${params.toString()}`);
   };
 
   const handleSearch = (term: string) => {
@@ -54,7 +57,7 @@ export default function HomePage() {
   };
 
   const handleProductClick = (product: any) => {
-    router.push(`/product/${product.id}`);
+    router.push(`/product-detail/${product.id}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 

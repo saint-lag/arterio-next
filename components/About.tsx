@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useCategories } from "@/hooks/useCategories";
+import { STORE_INFO } from "@/app/config/store";
 
 export function About() {
   const { categories } = useCategories();
@@ -22,7 +23,7 @@ export function About() {
       {/* Hero Section */}
       <div className="mb-24">
         <h1 className="mb-6 text-5xl tracking-tight text-black">
-          Sobre a Arterio
+          Sobre a {STORE_INFO.name}
         </h1>
         <p className="text-xl leading-relaxed text-black/60">
           Fornecendo suprimentos essenciais com excelência desde o início.
@@ -35,7 +36,7 @@ export function About() {
           NOSSA HISTÓRIA
         </h2>
         <p className="text-lg leading-relaxed text-black/80">
-          A Arterio nasceu com o propósito de simplificar o acesso a suprimentos 
+          A {STORE_INFO.name} nasceu com o propósito de simplificar o acesso a suprimentos 
           de qualidade. O que começou como um fornecedor especializado em produção 
           audiovisual evoluiu para uma loja completa de suprimentos gerais, atendendo 
           às necessidades mais diversas de profissionais e empresas.

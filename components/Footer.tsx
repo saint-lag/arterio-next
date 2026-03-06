@@ -1,6 +1,7 @@
 'use client';
 
 import { MapPin, Lock, CreditCard } from "lucide-react";
+import { STORE_INFO } from "@/app/config/store";
 
 interface FooterProps {
   onNavigate: (page: string) => void;
@@ -15,7 +16,7 @@ export function Footer({ onNavigate }: FooterProps) {
           {/* About */}
           <div className="space-y-4">
             <h3 className="text-sm tracking-wide text-black">
-              ARTERIO
+              {STORE_INFO.name.toUpperCase()}
             </h3>
             <p className="text-xs leading-relaxed text-black/60">
               Suprimentos essenciais com excelência. Simplicidade, qualidade e agilidade em cada entrega.
@@ -36,9 +37,6 @@ export function Footer({ onNavigate }: FooterProps) {
               </button>
               <button onClick={() => onNavigate("about")} className="text-xs text-black/60 hover:text-black transition-colors text-left">
                 Sobre
-              </button>
-              <button onClick={() => onNavigate("contact")} className="text-xs text-black/60 hover:text-black transition-colors text-left">
-                Contato
               </button>
             </nav>
           </div>
@@ -70,12 +68,13 @@ export function Footer({ onNavigate }: FooterProps) {
               CONTATO
             </h3>
             <div className="space-y-2 text-xs text-black/60">
-              <p>WhatsApp: (11) 99999-9999</p>
-              <p>Email: contato@arterio.com.br</p>
-              <p>Seg - Sex: 9h às 18h</p>
+              <p>WhatsApp: {STORE_INFO.phones[0].display}</p>
+              <p>Telefone Fixo: {STORE_INFO.phones[1].display}</p>
+              <p>Email: {STORE_INFO.email.general}</p>
+              <p>{STORE_INFO.hours.weekdays}</p>
               <p className="pt-2">
                 <MapPin size={12} strokeWidth={1.5} className="inline mr-1" />
-                Rio de Janeiro - RJ
+                {STORE_INFO.address.full}
               </p>
             </div>
           </div>
@@ -141,7 +140,7 @@ export function Footer({ onNavigate }: FooterProps) {
         <div className="mx-auto max-w-7xl px-6 py-6">
           <div className="flex flex-col gap-4 text-center md:flex-row md:items-center md:justify-between md:text-left">
             <p className="text-xs text-black/40">
-              © {new Date().getFullYear()} Arterio. Todos os direitos reservados.
+              © {new Date().getFullYear()} {STORE_INFO.name}. Todos os direitos reservados.
             </p>
             <div className="flex justify-center gap-6 text-xs text-black/40 md:justify-start">
               <button onClick={() => onNavigate("privacy")} className="hover:text-black transition-colors">
@@ -153,7 +152,19 @@ export function Footer({ onNavigate }: FooterProps) {
               <button onClick={() => onNavigate("shipping")} className="hover:text-black transition-colors">
                 Trocas e Devoluções
               </button>
+              
             </div>
+            <p className="text-xs text-black/30">
+              Desenvolvido por{' '}
+              <a
+                href="https://linkedin.com/in/gabrielmaiaoficial"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-black/40 hover:text-black transition-colors"
+              >
+                Gabriel Maia
+              </a>
+            </p>
           </div>
         </div>
       </div>

@@ -70,6 +70,7 @@ export function useProducts(options: UseProductsOptions = {}) {
     };
   }, [category, search, perPage, featured, enabled]);
 
+
   return { products, loading, error };
 }
 

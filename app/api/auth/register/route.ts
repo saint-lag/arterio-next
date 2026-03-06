@@ -9,6 +9,14 @@ export async function POST(request: Request) {
     const consumerKey = process.env.WC_CONSUMER_KEY;
     const consumerSecret = process.env.WC_CONSUMER_SECRET;
 
+    if (!wpUrl || !consumerKey || !consumerSecret) {
+      console.error('[Register] Variáveis de ambiente em falta: WC_CONSUMER_KEY / WC_CONSUMER_SECRET');
+      return NextResponse.json(
+        { error: 'Configuração do servidor incompleta' },
+        { status: 500 },
+      );
+    }
+
     // 1. Criar o Cliente no WooCommerce usando a REST API v3
     const authHeader = 'Basic ' + Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
     

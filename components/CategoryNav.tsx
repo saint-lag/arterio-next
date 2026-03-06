@@ -22,13 +22,9 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
     setActiveCategory(categoryId);
   };
 
-  const handleCategoryClick = (categoryId: number, categoryName: string, hasSubcategories: boolean) => {
-    if (!hasSubcategories) {
-      onCategorySelect?.(categoryId.toString(), categoryName);
-      setActiveCategory(null);
-    } else {
-      setActiveCategory(activeCategory === categoryId ? null : categoryId);
-    }
+  const handleCategoryClick = (categoryId: number, categoryName: string) => {
+    onCategorySelect?.(categoryId.toString(), categoryName);
+    setActiveCategory(null);
   };
 
   const handleSubcategoryClick = (subId: number, subName: string) => {
@@ -37,14 +33,8 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
     setIsMobileMenuOpen(false);
   };
 
-  const toggleMobileCategory = (categoryId: number, categoryName: string, hasSubcategories: boolean) => {
-    if (!hasSubcategories) {
-      onCategorySelect?.(categoryId.toString(), categoryName);
-      setIsMobileMenuOpen(false);
-      setActiveCategory(null);
-    } else {
-      setActiveCategory(activeCategory === categoryId ? null : categoryId);
-    }
+  const toggleMobileSubcategories = (categoryId: number) => {
+    setActiveCategory(activeCategory === categoryId ? null : categoryId);
   };
 
   if (loading) {
@@ -65,7 +55,7 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
               <button
                 key={category.id}
                 onMouseEnter={() => handleCategoryHover(category.id)}
-                onClick={() => handleCategoryClick(category.id, category.name, category.subcategories.length > 0)}
+                onClick={() => handleCategoryClick(category.id, category.name)}
                 className={`group relative flex items-center gap-1 py-5 text-xs tracking-wide transition-colors ${
                   activeCategory === category.id
                     ? "text-black"
@@ -95,17 +85,29 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
           <div className="border-t border-black/10 bg-white absolute w-full">
             <div className="mx-auto max-w-7xl px-6 py-6">
               <div className="grid grid-cols-4 gap-8">
-                {hierarchicalCategories
-                  .find((cat) => cat.id === activeCategory)
-                  ?.subcategories.map((subcategory) => (
-                    <button
-                      key={subcategory.id}
-                      onClick={() => handleSubcategoryClick(subcategory.id, subcategory.name)}
-                      className="text-left text-sm text-black/60 hover:text-black transition-colors"
-                    >
-                      {subcategory.name}
-                    </button>
-                  ))}
+                {(() => {
+                  const activeCat = hierarchicalCategories.find((cat) => cat.id === activeCategory);
+                  if (!activeCat) return null;
+                  return (
+                    <>
+                      <button
+                        onClick={() => { handleCategoryClick(activeCat.id, activeCat.name); }}
+                        className="text-left text-sm font-medium text-black hover:text-black/60 transition-colors"
+                      >
+                        Ver tudo em {activeCat.name}
+                      </button>
+                      {activeCat.subcategories.map((subcategory) => (
+                        <button
+                          key={subcategory.id}
+                          onClick={() => handleSubcategoryClick(subcategory.id, subcategory.name)}
+                          className="text-left text-sm text-black/60 hover:text-black transition-colors"
+                        >
+                          {subcategory.name}
+                        </button>
+                      ))}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -136,20 +138,27 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
             <div className="px-4 sm:px-6 py-4">
               {hierarchicalCategories.map((category) => (
                 <div key={category.id} className="mb-4">
-                  <button
-                    onClick={() => toggleMobileCategory(category.id, category.name, category.subcategories.length > 0)}
-                    className="flex items-center justify-between w-full py-3 text-sm tracking-wide text-black/80 hover:text-black transition-colors"
-                  >
-                    {category.name.toUpperCase()}
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => { handleCategoryClick(category.id, category.name); setIsMobileMenuOpen(false); }}
+                      className="flex-1 text-left py-3 text-sm tracking-wide text-black/80 hover:text-black transition-colors"
+                    >
+                      {category.name.toUpperCase()}
+                    </button>
                     {category.subcategories.length > 0 && (
-                      <ChevronDown 
-                        size={16} 
-                        className={`transition-transform ${
-                          activeCategory === category.id ? "rotate-180" : ""
-                        }`}
-                      />
+                      <button
+                        onClick={() => toggleMobileSubcategories(category.id)}
+                        className="p-3 text-black/60 hover:text-black transition-colors"
+                      >
+                        <ChevronDown 
+                          size={16} 
+                          className={`transition-transform ${
+                            activeCategory === category.id ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
                     )}
-                  </button>
+                  </div>
                   
                   {activeCategory === category.id && (
                     <div className="mt-2 pl-4 space-y-2">

@@ -13,6 +13,7 @@ import { Cart } from '@/components/Cart';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ToastContainer';
+import { STORE_INFO, getWhatsAppLink } from '@/app/config/store';
 
 interface ProductDetailPageProps {
   params: {
@@ -269,7 +270,7 @@ export default function ProductDetailPage() {
               {/* Contact for Price */}
               {priceOnRequest && inStock && (
                 <a
-                  href={`https://wa.me/5511999999999?text=${encodeURIComponent(`Olá! Gostaria de saber o preço do produto: ${product.name}`)}`}
+                  href={getWhatsAppLink(STORE_INFO.whatsapp.productInquiry(product.name))}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block w-full text-center border border-black text-black px-8 py-4 text-sm tracking-wide hover:bg-black hover:text-white transition-colors"
