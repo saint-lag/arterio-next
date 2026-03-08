@@ -1,3 +1,7 @@
+// API Route para GET e PUT em /api/account/orders/[id]
+// GET: retorna detalhes de um pedido específico (apenas campos seguros)
+// PUT: permite cancelar um pedido (status → "cancelled") se estiver num estado cancelável
+
 import { NextRequest, NextResponse } from 'next/server';
 import { extractTracking } from '@/utils/extractTracking';
 
@@ -9,63 +13,23 @@ const WC_AUTH = (WC_KEY && WC_SECRET)
   : '';
 
 
-// GET /api/account/orders/[id]
-// Valida que o pedido pertence ao utilizador autenticado antes de devolver.
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  if (!WP_URL || !WC_KEY || !WC_SECRET) {
-    console.error('[Order Detail] Variáveis de ambiente em falta: WC_CONSUMER_KEY / WC_CONSUMER_SECRET');
-    return NextResponse.json(
-      { error: 'Configuração do servidor incompleta' },
-      { status: 500 },
-    );
-  }
-
-  const token = request.cookies.get('wp_auth_token')?.value;
-  if (!token) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
-
-  const { id } = await params;
-
-  // Verificar que o utilizador autenticado é dono do pedido
-  const meRes = await fetch(`${WP_URL}/wp-json/wp/v2/users/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!meRes.ok) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
-  const me = await meRes.json();
-
-  const res = await fetch(`${WP_URL}/wp-json/wc/v3/orders/${id}`, {
-    headers: { Authorization: WC_AUTH },
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    return NextResponse.json(
-      { error: data.message ?? 'Pedido não encontrado' },
-      { status: res.status },
-    );
-  }
-
-  // Segurança: garante que o pedido pertence ao utilizador
-  if (data.customer_id !== me.id) {
-    return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
-  }
-
-  return NextResponse.json(extractTracking(data));
-}
-
 // ── Helpers reutilizados por GET e PUT ────────────────────────────────────────
 
+/**
+ * Autentica o utilizador via JWT, busca o pedido, e verifica autorização.
+ *
+ * Autorização aceita DUAS condições (OR):
+ *   1. order.customer_id === user.id  (pedido criado por utilizador registado)
+ *   2. order.billing.email === user.email  (guest checkout via session-handoff)
+ *
+ * Retorna { order, user } ou NextResponse de erro.
+ */
 async function authenticateAndAuthorize(
   request: NextRequest,
   orderId: string,
-): Promise<{ order: Record<string, unknown> } | NextResponse> {
+): Promise<{ order: Record<string, unknown>; user: { id: number; email: string } } | NextResponse> {
   if (!WP_URL || !WC_KEY || !WC_SECRET) {
+    console.error(`[Order ${orderId}] Configuração incompleta`);
     return NextResponse.json(
       { error: 'Configuração do servidor incompleta' },
       { status: 500 },
@@ -74,34 +38,70 @@ async function authenticateAndAuthorize(
 
   const token = request.cookies.get('wp_auth_token')?.value;
   if (!token) {
+    console.warn(`[Order ${orderId}] Tentativa sem token`);
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
+  // Identificar utilizador via JWT
   const meRes = await fetch(`${WP_URL}/wp-json/wp/v2/users/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!meRes.ok) {
+    console.error(`[Order ${orderId}] JWT inválido (status ${meRes.status})`);
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
   const me = await meRes.json();
+  const user = { id: me.id as number, email: (me.email as string) ?? '' };
+  console.log(`[Order ${orderId}] Auth: user_id=${user.id}, email=${user.email}`);
 
+  // Buscar pedido no WooCommerce
   const res = await fetch(`${WP_URL}/wp-json/wc/v3/orders/${orderId}`, {
     headers: { Authorization: WC_AUTH },
   });
   const data = await res.json();
   if (!res.ok) {
+    console.error(`[Order ${orderId}] WC API erro: status=${res.status}, msg=${data.message ?? '?'}`);
     return NextResponse.json(
       { error: data.message ?? 'Pedido não encontrado' },
       { status: res.status },
     );
   }
 
-  if (data.customer_id !== me.id) {
+  // Autorização: customer_id match OU billing email match
+  const orderCustomerId = data.customer_id as number;
+  const orderBillingEmail = ((data.billing as { email?: string })?.email ?? '').toLowerCase();
+  const userEmailLower = user.email.toLowerCase();
+
+  const isOwnerById = orderCustomerId !== 0 && orderCustomerId === user.id;
+  const isOwnerByEmail = orderBillingEmail !== '' && orderBillingEmail === userEmailLower;
+
+  console.log(`[Order ${orderId}] Autorização: customer_id=${orderCustomerId}, billing_email=${orderBillingEmail}, isOwnerById=${isOwnerById}, isOwnerByEmail=${isOwnerByEmail}`);
+
+  if (!isOwnerById && !isOwnerByEmail) {
+    console.warn(`[Order ${orderId}] Acesso negado para user ${user.id} (${user.email})`);
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
   }
 
-  return { order: data };
+  return { order: data, user };
 }
+
+
+// GET /api/account/orders/[id]
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  console.log(`[Order ${id}] GET request`);
+
+  const result = await authenticateAndAuthorize(request, id);
+  if (result instanceof NextResponse) return result;
+
+  const { order, user } = result;
+  console.log(`[Order ${id}] Devolvendo dados para user ${user.id}`);
+  return NextResponse.json(extractTracking(order));
+}
+
 
 // PUT /api/account/orders/[id]
 // Body: { status: "cancelled" }
@@ -113,15 +113,17 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const result = await authenticateAndAuthorize(request, id);
+  console.log(`[Order ${id}] PUT request (cancelamento)`);
 
+  const result = await authenticateAndAuthorize(request, id);
   if (result instanceof NextResponse) return result;
 
-  const { order } = result;
+  const { order, user } = result;
 
   // Validar body
   const body = await request.json().catch(() => null);
   if (!body || body.status !== 'cancelled') {
+    console.warn(`[Order ${id}] Body inválido: ${JSON.stringify(body)}`);
     return NextResponse.json(
       { error: 'Apenas status "cancelled" é permitido' },
       { status: 400 },
@@ -129,7 +131,9 @@ export async function PUT(
   }
 
   // Verificar se o pedido pode ser cancelado
-  if (!CANCELLABLE_STATUSES.includes(order.status as string)) {
+  const currentStatus = order.status as string;
+  if (!CANCELLABLE_STATUSES.includes(currentStatus)) {
+    console.warn(`[Order ${id}] Não cancelável: status actual=${currentStatus}`);
     return NextResponse.json(
       { error: 'Este pedido não pode mais ser cancelado' },
       { status: 422 },
@@ -137,6 +141,7 @@ export async function PUT(
   }
 
   // Atualizar status no WooCommerce
+  console.log(`[Order ${id}] Cancelando (status actual: ${currentStatus}) por user ${user.id}`);
   const updateRes = await fetch(`${WP_URL}/wp-json/wc/v3/orders/${id}`, {
     method: 'PUT',
     headers: {
@@ -148,11 +153,13 @@ export async function PUT(
 
   const updated = await updateRes.json();
   if (!updateRes.ok) {
+    console.error(`[Order ${id}] Erro ao cancelar: status=${updateRes.status}, msg=${updated.message ?? '?'}`);
     return NextResponse.json(
       { error: updated.message ?? 'Erro ao cancelar pedido' },
       { status: updateRes.status },
     );
   }
 
+  console.log(`[Order ${id}] Cancelado com sucesso`);
   return NextResponse.json(extractTracking(updated));
 }

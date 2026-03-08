@@ -85,5 +85,7 @@ export async function GET(
     meta_data: order.meta_data,
   });
 
+  console.log('[Order Detail] Pedido validado:', safe);
+
   return NextResponse.json(safe);
 }

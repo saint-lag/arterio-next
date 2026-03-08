@@ -5,11 +5,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCallback } from 'react';
 import type { WCOrder } from '@/app/types/account';
 
-async function fetcher(url: string): Promise<WCOrder[]> {
+async function fetcher(url: string): Promise<OrdersResponse> {
   const res = await fetch(`/api/${url}`);
   if (res.status === 401) throw new Error('401');
   if (!res.ok) throw new Error(`Erro ${res.status}`);
-  return res.json();
+  const orders: WCOrder[] = await res.json();
+  const total_pages = res.headers.get('X-WP-TotalPages') ?? '1';
+  return { orders, total_pages };
 }
 
 async function orderFetcher(url: string): Promise<WCOrder> {
@@ -19,17 +21,27 @@ async function orderFetcher(url: string): Promise<WCOrder> {
   return res.json();
 }
 
+interface OrdersResponse {
+  orders: WCOrder[];
+  total_pages: string;
+}
+
 // Hook para lista paginada de pedidos
 export function useOrders(page = 1) {
   const { isAuthenticated } = useAuth();
   const key = isAuthenticated ? `account/orders?page=${page}&per_page=10` : null;
 
-  const { data: orders, isLoading, error } = useSWR<WCOrder[]>(key, fetcher, {
+  const { data, isLoading, error } = useSWR<OrdersResponse>(key, fetcher, {
     revalidateOnFocus: false,
     errorRetryCount: 2,
   });
 
-  return { orders: orders ?? [], isLoading, error };
+  return {
+    orders: Array.isArray(data?.orders) ? data.orders : [],
+    totalPages: parseInt(data?.total_pages ?? '1', 10),
+    isLoading,
+    error,
+  };
 }
 
 // Hook para pedido individual
