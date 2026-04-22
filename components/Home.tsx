@@ -18,12 +18,41 @@ interface HomeProps {
 
 export function Home({ onNavigate, onCategorySelect, onProductClick }: HomeProps) {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
+  const [heroImageUrl, setHeroImageUrl] = useState<string>('');
 
   // Buscar produtos em destaque da Store API
   const { products: featuredProducts, loading: loadingFeatured } = useProducts({
     featured: true,
     perPage: 6,
   });
+
+  async function fetchLatestHeroImage() {
+  try {
+    // Busca a última mídia enviada cujo título ou arquivo contenha "hero-image"
+    const res = await fetch(`${process.env.NEXT_PUBLIC_WP_URL}/wp-json/wp/v2/media?search=hero-image&per_page=1&order=desc`);
+    
+    if (!res.ok) throw new Error('Falha ao buscar a imagem');
+    
+    const media = await res.json();
+    
+    // Se encontrou a imagem, retorna a URL (source_url) original
+    if (media && media.length > 0) {
+      return media[0].source_url; 
+    }
+    
+    // URL de fallback (uma imagem padrão caso não encontre nenhuma)
+    return `${process.env.NEXT_PUBLIC_WP_URL}/wp-content/uploads/2026/04/hero-image.jpg`; 
+
+  } catch (error) {
+    return `${process.env.NEXT_PUBLIC_WP_URL}/wp-content/uploads/2026/04/hero-image.jpg`;
+  }
+}
+  
+  useEffect(() => {
+    fetchLatestHeroImage().then(url => {
+      setHeroImageUrl(url);
+    });
+  }, []);
 
   const { categories } = useCategories();
 
@@ -65,8 +94,8 @@ export function Home({ onNavigate, onCategorySelect, onProductClick }: HomeProps
           </div>
           <div className="aspect-[4/3] bg-neutral-100 overflow-hidden">
             <img
-              src={`${process.env.NEXT_PUBLIC_WP_URL}/wp-content/uploads/2026/03/hero-image.jpg`}
-              alt="Equipamentos para Produção Audiovisual"
+              src={heroImageUrl}
+              alt="Suprimentos para Produção Audiovisual"
               className="w-full h-full object-cover"
             />
           </div>
