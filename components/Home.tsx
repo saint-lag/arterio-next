@@ -14,6 +14,7 @@ interface HomeProps {
   onNavigate: (page: string) => void;
   onCategorySelect: (category: string, categoryName?: string) => void;
   onProductClick?: (product: any) => void;
+  heroImageUrl: string;
 }
 
 export function Home({ onNavigate, heroImageUrl, onCategorySelect, onProductClick }: HomeProps) {
