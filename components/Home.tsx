@@ -20,10 +20,11 @@ export function Home({ onNavigate, onCategorySelect, onProductClick }: HomeProps
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
 
   // Buscar produtos em destaque da Store API
-  const { products: featuredProducts, loading: loadingFeatured } = useProducts({
+  const { products, loading: loadingFeatured } = useProducts({
     featured: true,
-    perPage: 6,
   });
+
+  const featuredProducts = useMemo(() => products.slice(0, 6), [products]);
 
 
 
