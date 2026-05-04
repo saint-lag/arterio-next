@@ -43,8 +43,10 @@ export function useCart() {
       // Se o token apontar para uma sessão expirada/consumida (ex: após checkout
       // no WooCommerce), limpa-o silenciosamente e reseta o cache SWR.
       const is404 = err?.message?.includes('404');
+      const is401 = err?.message?.includes('401');
+      const is403 = err?.message?.includes('403');
       const isGone = err?.message?.includes('410');
-      if ((is404 || isGone) && getCartToken()) {
+      if ((is404 || isGone || is401 || is403) && getCartToken()) {
         clearToken();
         mutate(undefined, { revalidate: false });
       }
