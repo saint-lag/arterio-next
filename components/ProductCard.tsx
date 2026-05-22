@@ -54,7 +54,7 @@ export function ProductCard({
             {image ? (
               <img
                 src={image}
-                alt={name}
+                alt={cleanName}
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
@@ -131,7 +131,7 @@ export function ProductCard({
             {!inStock ? (
               <button
                 onClick={() => {
-                  onNotifyMe(name);
+                  onNotifyMe(cleanName);
                 }}
                 className="text-xs tracking-wide text-black/60 underline hover:text-black transition-colors cursor-pointer"
               >

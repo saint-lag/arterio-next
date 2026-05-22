@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { ChevronDown, Menu } from "lucide-react";
 import { useCategories } from "@/hooks/useCategories";
 import { getHierarchicalCategories } from "@/utils/categoriesCleaner";
+import { decodeHTMLEntities } from "@/utils/formatters";
 
 interface CategoryNavProps {
   onCategorySelect?: (id: string, name: string) => void;
@@ -62,7 +63,7 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
                     : "text-black/60 hover:text-black"
                 }`}
               >
-                {category.name.toUpperCase()}
+                {decodeHTMLEntities(category.name).toUpperCase()}
                 {category.subcategories.length > 0 && (
                   <ChevronDown 
                     size={14} 
@@ -94,7 +95,7 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
                         onClick={() => { handleCategoryClick(activeCat.id, activeCat.name); }}
                         className="text-left text-sm font-medium text-black hover:text-black/60 transition-colors"
                       >
-                        Ver tudo em {activeCat.name}
+                        Ver tudo em {decodeHTMLEntities(activeCat.name)}
                       </button>
                       {activeCat.subcategories.map((subcategory) => (
                         <button
@@ -102,7 +103,7 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
                           onClick={() => handleSubcategoryClick(subcategory.id, subcategory.name)}
                           className="text-left text-sm text-black/60 hover:text-black transition-colors"
                         >
-                          {subcategory.name}
+                          {decodeHTMLEntities(subcategory.name)}
                         </button>
                       ))}
                     </>
@@ -143,7 +144,7 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
                       onClick={() => { handleCategoryClick(category.id, category.name); setIsMobileMenuOpen(false); }}
                       className="flex-1 text-left py-3 text-sm tracking-wide text-black/80 hover:text-black transition-colors"
                     >
-                      {category.name.toUpperCase()}
+                      {decodeHTMLEntities(category.name).toUpperCase()}
                     </button>
                     {category.subcategories.length > 0 && (
                       <button
@@ -168,7 +169,7 @@ export function CategoryNav({ onCategorySelect }: CategoryNavProps) {
                           onClick={() => handleSubcategoryClick(subcategory.id, subcategory.name)}
                           className="block w-full text-left py-2 text-sm text-black/60 hover:text-black transition-colors"
                         >
-                          {subcategory.name}
+                          {decodeHTMLEntities(subcategory.name)}
                         </button>
                       ))}
                     </div>

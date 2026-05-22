@@ -7,6 +7,7 @@ import type { WCProduct } from "@/types/woocommerce";
 import { useCategories } from "@/hooks/useCategories";
 import { useState, useMemo } from "react";
 import { getHierarchicalCategories } from '@/utils/categoriesCleaner';
+import { decodeHTMLEntities } from "@/utils/formatters";
 import { STORE_INFO } from "@/app/config/store";
 
 
@@ -102,7 +103,7 @@ export function Home({ onNavigate, onCategorySelect, onProductClick }: HomeProps
                 />
               </div>
               <h4 className="mb-2 text-sm tracking-tight text-black">
-                {category.name}
+                {decodeHTMLEntities(category.name)}
               </h4>
               <p className="text-xs text-black/40">{category.count}</p>
             </button>
@@ -142,13 +143,13 @@ export function Home({ onNavigate, onCategorySelect, onProductClick }: HomeProps
                     {product.image ? (
                       <img
                         src={product.image}
-                        alt={product.name}
+                        alt={decodeHTMLEntities(product.name)}
                         className="w-full h-full object-cover"
                       />
                     ) : null}
                   </div>
                   <h4 className="mb-2 text-xs tracking-tight text-black group-hover:text-black/60 transition-colors line-clamp-2">
-                    {product.name}
+                    {decodeHTMLEntities(product.name)}
                   </h4>
                   <span className="text-xs text-black">
                     R$ {typeof product.price === 'number'
@@ -165,8 +166,8 @@ export function Home({ onNavigate, onCategorySelect, onProductClick }: HomeProps
                       handleCategoryClick(Number(product.categoryId), product.category);
                     }}
                     className="absolute top-2 right-2 p-1 bg-white/80 rounded hover:bg-white transition-colors text-black/40 hover:text-black"
-                    title={`Ver todos os produtos de ${product.category}`}
-                    aria-label={`Navegar para categoria ${product.category}`}
+                    title={`Ver todos os produtos de ${decodeHTMLEntities(product.category)}`}
+                    aria-label={`Navegar para categoria ${decodeHTMLEntities(product.category)}`}
                   >
                     <ArrowRight size={14} />
                   </button>

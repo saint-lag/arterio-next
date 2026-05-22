@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useCategories } from "@/hooks/useCategories";
 import { getWhatsAppLink, STORE_INFO } from "@/app/config/store";
+import { decodeHTMLEntities } from "@/utils/formatters";
 
 export function About() {
   const { categories } = useCategories();
@@ -100,7 +101,7 @@ export function About() {
               className="border border-black/10 p-6 hover:border-black/30 transition-colors"
             >
               <p className="text-sm tracking-wide text-black/80">
-                {category.name}
+                {decodeHTMLEntities(category.name)}
               </p>
             </div>
           ))}

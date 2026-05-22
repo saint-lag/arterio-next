@@ -73,7 +73,7 @@ export function Cart({
                       {(item.product as any).image ? (
                         <img
                           src={(item.product as any).image}
-                          alt={item.product.name}
+                          alt={decodeHTMLEntities(item.product.name)}
                           className="h-full w-full object-cover"
                         />
                       ) : (

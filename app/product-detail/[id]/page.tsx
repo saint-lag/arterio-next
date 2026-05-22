@@ -460,7 +460,7 @@ export default function ProductDetailPage() {
                     >
                       <img
                         src={image.src}
-                        alt={image.alt || `${product.name} - imagem ${index + 1}`}
+                        alt={image.alt || `${decodeHTMLEntities(product.name)} - imagem ${index + 1}`}
                         className="h-full w-full object-cover"
                       />
                     </button>
@@ -535,10 +535,10 @@ export default function ProductDetailPage() {
                       <div key={attr.id}>
                         <div className="flex items-center justify-between mb-2">
                           <label className="text-xs tracking-wide text-black/60">
-                            {attr.name.toUpperCase()}
+                            {decodeHTMLEntities(attr.name).toUpperCase()}
                             {selected && (
                               <span className="ml-2 text-black font-medium">
-                                — {attr.terms.find(t => t.slug === selected)?.name}
+                                — {decodeHTMLEntities(attr.terms.find(t => t.slug === selected)?.name || '')}
                               </span>
                             )}
                           </label>
@@ -562,7 +562,7 @@ export default function ProductDetailPage() {
                                 title={
                                   isUnavailable ? 'Combinação indisponível'
                                   : isOutOfStock ? 'Esgotado'
-                                  : term.name
+                                  : decodeHTMLEntities(term.name)
                                 }
                                 className={`relative px-4 py-2 text-sm border transition-all ${
                                   isSelected
@@ -574,7 +574,7 @@ export default function ProductDetailPage() {
                                         : 'border-black/20 text-black hover:border-black/50'
                                 }`}
                               >
-                                {term.name}
+                                {decodeHTMLEntities(term.name)}
                                 {isOutOfStock && !isSelected && (
                                   <span className="absolute -top-1 -right-1 flex h-2 w-2">
                                     <span className="h-2 w-2 rounded-full bg-red-400" />
@@ -675,7 +675,7 @@ export default function ProductDetailPage() {
               {/* Contact for Price */}
               {priceOnRequest && inStock && (
                 <a
-                  href={getWhatsAppLink(STORE_INFO.whatsapp.productInquiry(product.name))}
+                  href={getWhatsAppLink(STORE_INFO.whatsapp.productInquiry(decodeHTMLEntities(product.name)))}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block w-full text-center border border-black text-black px-8 py-4 text-sm tracking-wide hover:bg-black hover:text-white transition-colors"
@@ -698,11 +698,11 @@ export default function ProductDetailPage() {
                       return !(storeAttr && (storeAttr.has_variations || storeAttr.terms.length > 1));
                     }).map((attr) => (
                       <div key={attr.id} className="flex justify-between text-sm">
-                        <span className="text-black/60">{attr.name}:</span>
+                        <span className="text-black/60">{decodeHTMLEntities(attr.name)}:</span>
                         <span className="text-black">
                           {(attr as any).terms
-                            ? (attr as any).terms.map((t: any) => t.name).join(', ')
-                            : attr.options.join(', ')}
+                            ? (attr as any).terms.map((t: any) => decodeHTMLEntities(t.name)).join(', ')
+                            : attr.options.map((o: string) => decodeHTMLEntities(o)).join(', ')}
                         </span>
                       </div>
                     ))}

@@ -3,7 +3,7 @@
 import { useOrder } from '@/hooks/useOrders';
 import { useParams } from 'next/navigation';
 import { OrderSkeleton } from '@/components/account/OrderSkeleton';
-import { formatCurrency, formatDate } from '@/utils/formatters';
+import { formatCurrency, formatDate, decodeHTMLEntities } from '@/utils/formatters';
 import Link from 'next/link';
 import { ChevronLeft, Truck, ExternalLink, Copy, Check, X } from 'lucide-react';
 import { useState } from 'react';
@@ -69,12 +69,12 @@ export default function PedidoDetailPage() {
             {item.image && (
               <img
                 src={item.image.src}
-                alt={item.name}
+                alt={decodeHTMLEntities(item.name)}
                 className="w-14 h-14 object-cover border border-black/10"
               />
             )}
             <div className="flex-1">
-              <p className="text-sm">{item.name}</p>
+              <p className="text-sm">{decodeHTMLEntities(item.name)}</p>
               <p className="text-xs text-black/40">Qtd: {item.quantity}</p>
             </div>
             <p className="text-sm">{formatCurrency(Number(item.total))}</p>

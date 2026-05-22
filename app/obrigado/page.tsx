@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, Package, ChevronRight } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/utils/formatters';
+import { formatCurrency, formatDate, decodeHTMLEntities } from '@/utils/formatters';
 import { STORE_INFO, getWhatsAppLink } from '@/app/config/store';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -231,12 +231,12 @@ function ObrigadoContent() {
                 {item.image?.src && (
                   <img
                     src={item.image.src}
-                    alt={item.name}
+                    alt={decodeHTMLEntities(item.name)}
                     className="w-14 h-14 object-cover border border-black/10 flex-shrink-0"
                   />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm truncate">{item.name}</p>
+                  <p className="text-sm truncate">{decodeHTMLEntities(item.name)}</p>
                   <p className="text-xs text-black/40">Qtd: {item.quantity}</p>
                 </div>
                 <p className="text-sm flex-shrink-0">{formatCurrency(Number(item.total))}</p>

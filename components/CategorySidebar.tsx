@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useCategories } from "@/hooks/useCategories";
+import { decodeHTMLEntities } from "@/utils/formatters";
 
 // Dentro de components/CategorySidebar.tsx
 interface CategorySidebarProps {
@@ -54,7 +55,7 @@ export function CategorySidebar({ onCategorySelect, selectedCategoryId }: Catego
                   : 'text-black hover:text-black/60'
               }`}
             >
-              {category.name.toUpperCase()}
+              {decodeHTMLEntities(category.name).toUpperCase()}
             </button>
             
             {category.subcategories.length > 0 && (
@@ -69,7 +70,7 @@ export function CategorySidebar({ onCategorySelect, selectedCategoryId }: Catego
                           : 'text-black/60 hover:text-black'
                       }`}
                     >
-                      {subcategory.name}
+                      {decodeHTMLEntities(subcategory.name)}
                     </button>
                   </li>
                 ))}
