@@ -46,7 +46,35 @@ export async function GET(
     }
 
     const variations = await res.json();
-    return NextResponse.json(variations);
+    
+    // Debug: mostrar estrutura das variações da REST API v3
+    if (Array.isArray(variations) && variations.length > 0) {
+      console.debug(`[Variations API] REST API v3 first variation:`, {
+        id: variations[0].id,
+        attributes: variations[0].attributes,
+        attributeKeys: Object.keys(variations[0].attributes?.[0] || {}),
+      });
+    }
+    
+    // ─── Converter atributos REST API v3 para formato esperado ──────────────────────────
+    // REST API v3: [{id, name, option}]
+    // Esperado: [{attribute: "tamanho", value: "m"}]
+    const convertedVariations = variations.map((v: any) => ({
+      ...v,
+      attributes: v.attributes?.map((attr: any) => ({
+        // Usar o "name" como attribute (sem conversão para pa_)
+        attribute: attr.name.toLowerCase().replace(/\s+/g, '_'),
+        // "option" é o valor selecionado, converter para slug (lowercase, sem espaços)
+        value: attr.option.toLowerCase().replace(/\s+/g, '-'),
+      })) || [],
+    }));
+    
+    console.debug(`[Variations API] Converted first variation:`, {
+      id: convertedVariations[0]?.id,
+      attributes: convertedVariations[0]?.attributes,
+    });
+    
+    return NextResponse.json(convertedVariations);
   } catch (error) {
     console.error('[Variations] Erro ao buscar variações:', error);
     return NextResponse.json(

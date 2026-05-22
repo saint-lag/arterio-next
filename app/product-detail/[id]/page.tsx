@@ -90,6 +90,29 @@ export default function ProductDetailPage() {
   const storeAttributes: StoreApiAttribute[] = (product as any)?.attributes ?? [];
   // Atributos de variação (produto variable)
   const variationAttributes = storeAttributes.filter(a => a.has_variations);
+  
+  // ⚠️ DEBUG: verificar se variationAttributes têm taxonomy
+  if (variationAttributes.length > 0) {
+    const hasUndefinedTaxonomy = variationAttributes.some(a => !a.taxonomy);
+    if (hasUndefinedTaxonomy) {
+      console.error('[ProductDetail] ❌ variationAttributes tem undefined taxonomy!', variationAttributes);
+    } else {
+      console.debug('[ProductDetail] ✓ variationAttributes têm taxonomy:', 
+        variationAttributes.map(a => ({ name: a.name, taxonomy: a.taxonomy }))
+      );
+    }
+    
+    // Extra debug: mostrar TODOS os atributos, não apenas os de variação
+    console.debug('[ProductDetail] TODOS os storeAttributes:', 
+      storeAttributes.map(a => ({ 
+        name: a.name, 
+        taxonomy: a.taxonomy, 
+        has_variations: a.has_variations,
+        terms: a.terms?.length 
+      }))
+    );
+  }
+  
   // Atributos seleccionáveis: variação OU atributos com mais de 1 opção (produto simples)
   const selectableAttributes = storeAttributes.filter(
     a => a.has_variations || a.terms.length > 1,
@@ -148,12 +171,23 @@ export default function ProductDetailPage() {
   // Para produtos simples com atributos: não há restrição de "tudo seleccionado"
   const canAddToCart = isVariable ? allAttributesSelected : true;
 
+  // Helper: encontrar um valor de atributo numa variação (compatível com {attribute} ou {name})
+  const getAttributeValue = (attrList: any[], attrKey: string) => {
+    const attr = attrList.find(a => 
+      // Suporta tanto {attribute: "pa_size", value: ...} quanto {name: "Size", value: ...}
+      a.attribute === attrKey || a.name === attrKey
+    );
+    return attr?.value;
+  };
+
   // Encontra a variação na lista de refs do Store API (por taxonomy + slug)
   const matchedRef = allAttributesSelected
     ? storeVariationRefs.find(ref =>
         variationAttributes.every(attr => {
           const selected = selectedAttributes[attr.taxonomy];
-          const refValue = ref.attributes.find(a => a.attribute === attr.taxonomy)?.value;
+          // Suporta tanto atributos com "attribute" (taxonomy slug) quanto "name" (display name)
+          const refValue = getAttributeValue(ref.attributes, attr.taxonomy) || 
+                          getAttributeValue(ref.attributes, attr.name);
           // refValue vazio ("") aceita qualquer opção ("Any X")
           return refValue === selected || refValue === '';
         }),
@@ -196,7 +230,9 @@ export default function ProductDetailPage() {
         // este term com as selecções actuais dos outros atributos
         const matchingRef = storeVariationRefs.find(ref => {
           // Este ref tem o term actual para este atributo?
-          const refVal = ref.attributes.find(a => a.attribute === attr.taxonomy)?.value;
+          // Suporta tanto {attribute: "pa_size"} quanto {name: "Size"}
+          const refVal = getAttributeValue(ref.attributes, attr.taxonomy) || 
+                        getAttributeValue(ref.attributes, attr.name);
           if (refVal !== term.slug && refVal !== '') return false;
 
           // Combina com os outros atributos seleccionados?
@@ -204,7 +240,8 @@ export default function ProductDetailPage() {
             if (otherAttr.taxonomy === attr.taxonomy) return true; // skip self
             const otherSelected = selectedAttributes[otherAttr.taxonomy];
             if (!otherSelected) return true; // nenhuma selecção → tudo combina
-            const otherRefVal = ref.attributes.find(a => a.attribute === otherAttr.taxonomy)?.value;
+            const otherRefVal = getAttributeValue(ref.attributes, otherAttr.taxonomy) || 
+                               getAttributeValue(ref.attributes, otherAttr.name);
             return otherRefVal === otherSelected || otherRefVal === '';
           });
         });
@@ -298,15 +335,34 @@ export default function ProductDetailPage() {
       // Construir array de variação para o Store API (taxonomy slug + term slug)
       const variation = isVariable
         ? variationAttributes
-            .map(attr => ({
-              attribute: attr.taxonomy,
-              value: selectedAttributes[attr.taxonomy] || '',
-            }))
-            .filter(attr => attr.value && attr.value.trim() !== '')
+            .map(attr => {
+              const selected = selectedAttributes[attr.taxonomy];
+              
+              return {
+                attribute: attr.taxonomy,
+                // IMPORTANTE: WooCommerce espera lowercase slugs
+                value: (selected || '').trim(),
+              };
+            })
+            .filter(attr => attr.value && attr.value.trim() !== '' && attr.attribute)
         : undefined;
 
-      // Debug: verificar se a variação é válida
+      // Debug detalhado para diagnosticar
       if (isVariable) {
+        console.debug('[ProductDetail] variationAttributes:', variationAttributes);
+        console.debug('[ProductDetail] selectedAttributes:', selectedAttributes);
+        console.debug('[ProductDetail] variation (antes de enviar):', variation);
+        
+        // Verificar se tem undefined
+        const hasUndefined = variation?.some((v: any) => 
+          v.attribute === undefined || v.attribute === null || v.attribute === ''
+        );
+        if (hasUndefined) {
+          console.error('[ProductDetail] ❌ ERRO: variation tem attribute indefinido!', variation);
+          // Não enviar ao carrinho se tiver undefined
+          return;
+        }
+        
         console.debug('[ProductDetail] Adding to cart with variation:', {
           productId: product.id,
           variation,
@@ -316,13 +372,31 @@ export default function ProductDetailPage() {
         });
       }
 
+      // Log final do payload completo antes de enviar
+      const finalVariations = variation && variation.length > 0 ? variation : undefined;
+      const cartPayload = {
+        product: {
+          id: product.id.toString(),
+          name: product.name,
+          price: price || 0,
+          category: categoryName,
+          inStock: true,
+        },
+        quantity,
+        variations: finalVariations,
+      };
+      
+      console.log('🛒 PAYLOAD FINAL ENVIADO AO CARRINHO:');
+      console.log('   Variações:', JSON.stringify(finalVariations, null, 2));
+      console.log('   Payload completo:', cartPayload);
+
       addToCart({
         id: product.id.toString(),
         name: product.name,
         price: price || 0,
         category: categoryName,
         inStock: true,
-      }, quantity, variation && variation.length > 0 ? variation : undefined);
+      }, quantity, finalVariations);
     }
   };
 
