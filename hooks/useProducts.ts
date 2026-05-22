@@ -73,8 +73,10 @@ export function useProducts(options: UseProductsOptions = {}) {
             
             localProducts = localProducts.filter(product => {
               // First try to match by categoryId if provided
-              if (categoryIdsToMatch.size > 0 && product.categoryId) {
-                if (categoryIdsToMatch.has(product.categoryId)) {
+              if (categoryIdsToMatch.size > 0) {
+                // Verificar em TODAS as categorias do produto, não apenas a primeira
+                const allCategoryIds = product.categoryIds || (product.categoryId ? [product.categoryId] : []);
+                if (allCategoryIds.some(id => categoryIdsToMatch.has(id))) {
                   return true;
                 }
               }

@@ -93,6 +93,7 @@ export const productService = {
         if (params?.categoryId || params?.categoryName) {
           // Build a set of category IDs to match, including parent categories
           const categoryIdsToMatch = new Set<string>();
+          const categoryNamesToMatch = new Set<string>();
           
           if (params.categoryId) {
             categoryIdsToMatch.add(params.categoryId);
@@ -107,19 +108,28 @@ export const productService = {
             }
           }
           
+          if (params.categoryName) {
+            categoryNamesToMatch.add(params.categoryName.toLowerCase());
+          }
+          
           filteredProducts = pageProducts.filter(product => {
-            // First try to match by categoryId if provided
-            if (categoryIdsToMatch.size > 0) {
-              const categoryMatch = product.categories?.some((cat: any) => 
-                categoryIdsToMatch.has(cat.id.toString())
-              );
-              if (categoryMatch) return true;
+            // product.categories é um array de objetos com { id, name, slug, link }
+            if (!product.categories || product.categories.length === 0) {
+              return false;
             }
             
-            // Fallback to category name matching if provided
-            if (params.categoryName && product.categories && product.categories.length > 0) {
+            // Match by categoryId
+            if (categoryIdsToMatch.size > 0) {
+              const idMatch = product.categories.some((cat: any) => 
+                categoryIdsToMatch.has(cat.id.toString())
+              );
+              if (idMatch) return true;
+            }
+            
+            // Match by categoryName
+            if (categoryNamesToMatch.size > 0) {
               const nameMatch = product.categories.some((cat: any) => 
-                cat.name.toLowerCase() === params.categoryName!.toLowerCase()
+                categoryNamesToMatch.has(cat.name.toLowerCase())
               );
               if (nameMatch) return true;
             }
@@ -161,13 +171,31 @@ export const categoryService = {
 export function mapWCProductToLocal(storeProduct: any): Product {
   const priceString = storeProduct.prices?.price || '0';
   const price = typeof priceString === 'string' ? parseFloat(priceString) / 100 : priceString;
+  
+  // Extrair IDs e nomes de TODAS as categorias (são objetos: { id, name, slug, link })
+  const categoryIds: string[] = [];
+  let firstCategoryId = '';
+  let firstCategoryName = 'Sem Categoria';
+  
+  if (storeProduct.categories && Array.isArray(storeProduct.categories)) {
+    storeProduct.categories.forEach((cat: any) => {
+      if (cat.id) {
+        categoryIds.push(cat.id.toString());
+        if (!firstCategoryId) {
+          firstCategoryId = cat.id.toString();
+          firstCategoryName = decodeHTMLEntities(cat.name || 'Sem Categoria');
+        }
+      }
+    });
+  }
 
   return {
     id: storeProduct.id.toString(),
     name: decodeHTMLEntities(storeProduct.name),
     price: price,
-    category: decodeHTMLEntities(storeProduct.categories?.[0]?.name || 'Sem Categoria'),
-    categoryId: storeProduct.categories?.[0]?.id?.toString(), // Adiciona o ID da categoria
+    category: firstCategoryName,
+    categoryId: firstCategoryId,
+    categoryIds: categoryIds, // Array de TODOS os IDs de categoria
     inStock: storeProduct.is_in_stock, 
     image: storeProduct.images?.[0]?.src,
     sku: storeProduct.sku,

@@ -41,15 +41,9 @@ export default function ProductDetailPage() {
 
   const productId = params?.id as string;
 
-  const handleCategorySelect = (selectedCategory: string) => {
-    // NÃO usar esta função para navegação de categoria
-    // Usar handleNavigateToCategory em vez disso
-    router.push(`/products?category=${encodeURIComponent(selectedCategory)}`);
-  };
-
-  const handleNavigateToCategory = (categoryId: string, categoryName: string) => {
+  const handleCategorySelect = (id: string, name: string) => {
     // Navega para a página de produtos com os parâmetros corretos
-    router.push(`/products?categoryId=${categoryId}&categoryName=${encodeURIComponent(categoryName)}`);
+    router.push(`/products?categoryId=${id}&categoryName=${encodeURIComponent(name)}`);
   };
 
   const navigateTo = (page: string) => {
@@ -290,6 +284,12 @@ export default function ProductDetailPage() {
   // Imagem: se a variação seleccionada tem imagem, sobrepõe a galeria principal
   const variationImage = selectedVariation?.image?.src ? selectedVariation.image : null;
 
+  const handleSearch = (term: string) => {
+    if (term.trim()) {
+      router.push(`/products?search=${encodeURIComponent(term)}`);
+    }
+  };
+
   const handleAddToCart = () => {
     if (inStock && !priceOnRequest) {
       // Para variáveis: só adiciona se todos os atributos de variação foram seleccionados
@@ -333,7 +333,7 @@ export default function ProductDetailPage() {
           cartItemCount={itemCount} 
           onCartClick={() => setCartOpen(true)}
           onNavigate={navigateTo}
-          onSearch={() => {}}
+          onSearch={handleSearch}
         />
 
         <CategoryNav onCategorySelect={handleCategorySelect} />
@@ -405,7 +405,7 @@ export default function ProductDetailPage() {
                     onClick={() => {
                       const categoryId = product.categories[0].id.toString();
                       const categoryNameFull = product.categories[0].name;
-                      handleNavigateToCategory(categoryId, categoryNameFull);
+                      handleCategorySelect(categoryId, categoryNameFull);
                     }}
                     className="text-xs tracking-wide text-black/60 underline hover:text-black transition-colors"
                     title={`Ver todos os produtos de ${categoryName}`}
