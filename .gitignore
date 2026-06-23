@@ -42,3 +42,12 @@ next-env.d.ts
 
 VARIATION_DEBUGGING_GUIDE.md
 VARIATION_FIX_SUMMARY.md
+# OpenNext
+.open-next
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+
+!.env.example
