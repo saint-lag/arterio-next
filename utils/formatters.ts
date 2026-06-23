@@ -16,6 +16,7 @@ export const decodeHTMLEntities = (text: string): string => {
         .replace(/&amp;/g, '&')
         .replace(/&quot;/g, '"')
         .replace(/&#039;/g, "'")
+        .replace(/&#8243;/g, "″")
 
 }
 /**
