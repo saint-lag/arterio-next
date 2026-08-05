@@ -3,6 +3,7 @@ import { AuthProvider } from "@/app/providers/AuthProvider";
 import "./globals.css";
 import { SWRProvider } from "./providers/SWRProvider";
 import { STORE_INFO } from "@/app/config/store";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: `${STORE_INFO.name} - ${STORE_INFO.tagline}`,
@@ -22,6 +23,7 @@ export default function RootLayout({
             {children}
           </AuthProvider>
         </SWRProvider>
+        <SpeedInsights />
       </body >
     </html >
   );
